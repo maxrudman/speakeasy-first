@@ -1,0 +1,48 @@
+name: CI
+
+# Runs on every pull request and every push to main.
+# A PR can't be merged until this passes (turn on branch protection, see CONTRIBUTING.md).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: speakready
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/speakready
+      SESSION_SECRET: ci-only-secret-ci-only-secret-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npm run typecheck
+      - name: Migrations apply cleanly
+        run: npm run db:migrate
+      - name: Schema and migrations are in sync
+        run: |
+          npx drizzle-kit generate --name ci-check
+          if [ -n "$(git status --porcelain drizzle)" ]; then
+            echo "::error::src/db/schema.ts changed without a migration. Run 'npm run db:generate' and commit the files in /drizzle."
+            git status --porcelain drizzle
+            exit 1
+          fi
+      - name: Build
+        run: npm run build

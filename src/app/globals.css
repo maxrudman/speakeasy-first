@@ -1,26 +1,89 @@
 @import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/public-sans";
 
+/*
+ * Design tokens. Change colors here and the whole app follows.
+ *  paper   – page background        surface – cards and panels
+ *  ink     – main text              muted   – secondary text
+ *  line    – borders                pine    – primary actions, "got it right"
+ *  coral   – "got it wrong", destructive actions
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --paper: #f3f5f7;
+  --surface: #ffffff;
+  --ink: #18212f;
+  --muted: #5b6676;
+  --line: #dce1e7;
+  --pine: #2e6b57;
+  --pine-strong: #235444;
+  --pine-soft: #e2eee9;
+  --coral: #b4504a;
+  --coral-soft: #f6e5e2;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #12161c;
+    --surface: #1a2029;
+    --ink: #e7ebf0;
+    --muted: #9aa4b2;
+    --line: #2b333e;
+    --pine: #5fb394;
+    --pine-strong: #7cc6aa;
+    --pine-soft: #1d3029;
+    --coral: #e07b70;
+    --coral-soft: #3a2220;
   }
 }
 
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-pine: var(--pine);
+  --color-pine-strong: var(--pine-strong);
+  --color-pine-soft: var(--pine-soft);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --font-sans: "Public Sans Variable", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Public Sans Variable", system-ui, sans-serif;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--pine-soft);
+}
+
+/* Flashcard flip. Respects reduced-motion settings. */
+.card-face {
+  transition: transform 420ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 300ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-face {
+    transition: none;
+  }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--coral) 45%, transparent); }
+  100% { box-shadow: 0 0 0 18px transparent; }
+}
+.recording-pulse {
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .recording-pulse { animation: none; }
 }
