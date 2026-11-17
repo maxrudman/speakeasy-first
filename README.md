@@ -120,4 +120,12 @@ Server logs are one JSON line per event (search Vercel logs for `"level":"error"
 
 Each server tier has a timeout and one retry, then the next one is tried. A circuit breaker skips a provider that keeps failing. Audio goes to the server in memory only. It is never written to disk, the database or logs, and AssemblyAI copies are deleted right after. Words the transcriber wasn't sure about are shown as chips the user can tap to fix. `/api/transcribe` is rate-limited per user (30 per 10 minutes).
 
-**AI fallbacks.** Every Claude call in `src/lib/ai.ts` falls back to the built-in lists if there's no API key or the request fails, so the app never breaks because of the API.
+**AI backups (cascade).** Every AI call goes through `runJson()` in `src/lib/ai-cascade.ts`, which tries in order:
+
+1. `ANTHROPIC_MODEL` (default `claude-sonnet-5-5`)
+2. each model in `ANTHROPIC_MODEL_FALLBACKS` (for example `claude-haiku-5-5`)
+3. OpenAI (`OPENAI_MODEL`, default `gpt-4o-mini`) if `OPENAI_API_KEY` is set
+4. earlier results for the same settings, from the `ai_cache` table
+5. the built-in word and question lists
+
+Each model gets a 25-second timeout, exponential backoff on 429 and 5xx errors (two retries), and a circuit breaker that skips it for a minute after three failures in a row. Replies use structured outputs and are validated with zod; a reply that doesn't match gets one re-ask before moving on. The whole cascade stays inside a 45-second budget. Each user gets 40 AI generations per 10 minutes; past that they get cached or built-in content instead of an error. Logs record which tier answered (`"event":"ai.answered"`), never the prompt or reply. Set `SPEAKEASY_MOCK_AI=1` to skip all providers (no cost) for demos and tests. `/api/health` lists the tier order under `aiTiers`.

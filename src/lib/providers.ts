@@ -19,6 +19,11 @@ export function providerKey(id: ProviderId): string | null {
   return value ? value : null;
 }
 
+/** Lets tests or a proxy point OpenAI calls elsewhere. */
+export function openAiBaseUrl() {
+  return (process.env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1").replace(/\/$/, "");
+}
+
 export function isMockAi() {
   return process.env.SPEAKEASY_MOCK_AI === "1" || process.env.SPEAKEASY_MOCK_AI === "true";
 }

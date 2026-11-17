@@ -17,6 +17,11 @@ export const LIMITS = {
 
 export type LimitBucket = keyof typeof LIMITS;
 
+/** Best-effort client IP for limits on logged-out routes (Vercel sets x-forwarded-for). */
+export function clientIp(req: Request) {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+}
+
 /** Counts one call and returns whether it's allowed. Fails open if the table is unavailable. */
 export async function checkRateLimit(bucket: LimitBucket, who: string): Promise<{ ok: boolean; retryAfter: number }> {
   const { limit, windowSeconds } = LIMITS[bucket];

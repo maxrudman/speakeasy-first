@@ -7,7 +7,7 @@ import { AudiencePanel, type Audience } from "./audience-panel";
 import { Recorder } from "./recorder";
 import { useRecorder } from "./use-recorder";
 
-type QuestionsResponse = { questions: string[]; source: "ai" | "builtin" };
+type QuestionsResponse = { questions: string[]; source: "ai" | "cache" | "builtin" | "mock" };
 
 const AUDIENCE_STORAGE_KEY = "speak-ready:audience";
 /** Fetch the next batch when this many questions are left. */
@@ -159,8 +159,10 @@ export function PracticeView() {
             </p>
             <p className="mt-3 font-display text-2xl font-medium leading-snug tracking-tight sm:text-[1.75rem]">{question}</p>
             <div className="mt-6 flex items-center justify-between gap-3">
-              {source === "builtin" ? (
-                <span className="text-xs text-muted">From the built-in question list</span>
+              {source === "builtin" || source === "cache" ? (
+                <span className="text-xs text-muted">
+                  {source === "cache" ? "From your earlier questions for this audience" : "From the built-in question list"}
+                </span>
               ) : (
                 <span />
               )}

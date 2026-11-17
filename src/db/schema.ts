@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -89,6 +90,26 @@ export const rateLimits = pgTable("rate_limits", {
   windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
   count: integer("count").notNull().default(0),
 });
+
+/**
+ * Earlier AI results, kept per user and profile so the app can fall back to them
+ * when every AI provider is unavailable. Only generated content is stored (terms,
+ * questions), never transcripts or journal text.
+ */
+export const aiCache = pgTable(
+  "ai_cache",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    task: text("task").notNull(),
+    profileKey: text("profile_key").notNull(),
+    payload: jsonb("payload").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_cache_lookup").on(t.userId, t.task, t.profileKey, t.createdAt)],
+);
 
 export type User = typeof users.$inferSelect;
 export type VocabTerm = typeof vocabTerms.$inferSelect;

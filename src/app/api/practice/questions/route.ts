@@ -6,10 +6,11 @@ import { audienceSchema } from "@/lib/validation";
 export const maxDuration = 60;
 
 /** Generates a batch of practice questions for the described audience. */
-export const POST = withUser(async (req) => {
+export const POST = withUser(async (req, user) => {
   const { data, error } = await parseBody(req, audienceSchema);
   if (error) return error;
   const result = await generateQuestions({
+    userId: user.id,
     purpose: data.purpose,
     role: data.role,
     specifications: data.specifications,
