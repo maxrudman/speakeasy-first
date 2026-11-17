@@ -29,6 +29,7 @@ Open `.env.local` and fill in:
 | `DATABASE_URL` | Your own free database at [neon.tech](https://neon.tech). Create a project, then copy the pooled connection string. Each teammate should use their **own** database (or their own Neon branch) so you don't overwrite each other's test data. |
 | `SESSION_SECRET` | Run `openssl rand -base64 32` and paste the result. Any random string of 32+ characters works. |
 | `ANTHROPIC_API_KEY` | Optional. From [console.anthropic.com](https://console.anthropic.com). Without it, the app uses its built-in word and question lists. |
+| `SPEAKEASY_MOCK_AI` | Optional. Set to `1` to try tailored vocabulary locally without an API key (sample terms, same mix rules). |
 
 Then:
 
@@ -72,6 +73,7 @@ Then add your teammates under **Settings → Collaborators** on GitHub. See [CON
 | `npm run db:migrate` | Apply migrations to your database |
 | `npm run db:seed` | Create the demo account |
 | `npm run db:studio` | Browse your database in the browser |
+| `npm run vocab:sample` | Print sample vocabulary batches for a few profiles and check the mix (no database needed) |
 
 ## Project map
 
@@ -95,6 +97,8 @@ src/
   db/schema.ts                  Database tables
   lib/
     ai.ts                       All Claude API calls, with fallbacks
+    vocab-tailoring.ts          How terms are tailored: prompts, the 60/20/20 mix, de-duplication
+    vocab-mock.ts               SPEAKEASY_MOCK_AI sample terms (data in data/mock-terms.ts)
     vocab-rules.ts              Spaced repetition rules (tweak the numbers here)
     auth.ts, session.ts         Login sessions
   proxy.ts                      Redirects logged-out visitors to /login
@@ -106,5 +110,7 @@ drizzle/                        Database migrations (commit these)
 **Spaced repetition.** Each term sits in a box from 0 to 5. A check moves it up one box, and an X sends it back to 0. Lower boxes show up far more often. At box 5 the term is "mastered": it's retired, replaced with a new term, and comes back for review about 1 in 15 cards. All the numbers live in `src/lib/vocab-rules.ts`.
 
 **Recording and transcripts.** Audio is recorded in the browser and never leaves the device. Live transcription uses the browser's built-in speech recognition, which works best in Chrome and Edge. In other browsers, users can type or paste into the transcript box.
+
+**Tailored vocabulary.** Each batch of new terms is about 60% field terms (spread across every field you list, with at least one "bridge" term connecting them), 20% terms that land well with your audience, and 20% broad professional vocabulary, pitched at your level. A batch of 10 is 6/2/2 and the 5 added on a settings change are 3/1/1. A term you've had before, including removed ones, never comes back.
 
 **AI fallbacks.** Every Claude call in `src/lib/ai.ts` falls back to the built-in lists if there's no API key or the request fails, so the app never breaks because of the API.

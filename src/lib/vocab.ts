@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { generateTerms, type AiSource } from "./ai";
 import type { CurrentUser } from "./auth";
 import { TARGET_ACTIVE } from "./vocab-rules";
+import { termKey } from "./vocab-tailoring";
 
 export const termColumns = {
   id: schema.vocabTerms.id,
@@ -54,35 +55,45 @@ export async function addTerms(
 ): Promise<{ added: number; source: AiSource | null }> {
   if (!user.vocabLevel || !user.vocabField || !user.vocabAudience) return { added: 0, source: null };
 
-  const known = await db
-    .select({ key: schema.vocabTerms.termKey })
-    .from(schema.vocabTerms)
-    .where(eq(schema.vocabTerms.userId, user.id));
-
   const { terms, source } = await generateTerms({
     level: user.vocabLevel,
     field: user.vocabField,
     audience: user.vocabAudience,
     count,
-    exclude: known.map((k) => k.key),
+    // Every term the user has ever had, including removed ones, so none come back.
+    exclude: await knownTermKeys(user.id),
   });
-  if (!terms.length) return { added: 0, source };
+  return { added: await saveTerms(user.id, terms), source };
+}
 
+async function knownTermKeys(userId: string) {
+  const known = await db
+    .select({ key: schema.vocabTerms.termKey })
+    .from(schema.vocabTerms)
+    .where(eq(schema.vocabTerms.userId, userId));
+  return known.map((k) => k.key);
+}
+
+/** Saves terms, skipping any the user already has. Returns how many were added. */
+async function saveTerms(
+  userId: string,
+  terms: { term: string; definition: string; example?: string; partOfSpeech?: string }[],
+) {
+  if (!terms.length) return 0;
   const inserted = await db
     .insert(schema.vocabTerms)
     .values(
       terms.map((t) => ({
-        userId: user.id,
+        userId,
         term: t.term.trim(),
-        termKey: t.term.trim().toLowerCase(),
+        termKey: termKey(t.term),
         definition: t.definition.trim(),
         example: t.example?.trim() ?? "",
         partOfSpeech: t.partOfSpeech?.trim() ?? "",
       })),
     )
-    // Two tabs topping up at once could race; the unique index makes that harmless.
+    // Two tabs adding at once could race; the unique index makes that harmless.
     .onConflictDoNothing()
     .returning({ id: schema.vocabTerms.id });
-
-  return { added: inserted.length, source };
+  return inserted.length;
 }
