@@ -135,6 +135,19 @@ export function Notice({ children }: { children: ReactNode }) {
 
 /* ----------------------------------- Dialog ----------------------------------- */
 
+/** Opens/closes a <dialog>, falling back to the open attribute where showModal() is missing (old Safari). */
+export function syncDialog(el: HTMLDialogElement | null, open: boolean) {
+  if (!el) return;
+  if (open && !el.open) {
+    if (typeof el.showModal === "function") el.showModal();
+    else el.setAttribute("open", "");
+  }
+  if (!open && el.open) {
+    if (typeof el.close === "function") el.close();
+    else el.removeAttribute("open");
+  }
+}
+
 /** Accessible modal built on the native <dialog> element (focus trap + Esc for free). */
 export function Dialog({
   open,
@@ -153,10 +166,7 @@ export function Dialog({
   const titleId = useId();
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (open && !el.open) el.showModal();
-    if (!open && el.open) el.close();
+    syncDialog(ref.current, open);
   }, [open]);
 
   return (

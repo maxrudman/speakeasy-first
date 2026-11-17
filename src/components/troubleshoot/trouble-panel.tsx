@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Spinner } from "@/components/ui";
+import { Button, Spinner, syncDialog } from "@/components/ui";
 import { getAudioContextCtor, MIC_CONSTRAINTS, micErrorMessage, pickRecordingMimeType, rmsLevel, SILENCE_LEVEL, QUIET_LEVEL } from "@/lib/audio-support";
 import {
   detectProblems,
@@ -52,10 +52,7 @@ export function TroublePanel({ open, onClose }: { open: boolean; onClose: () => 
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (open && !el.open) el.showModal();
-    if (!open && el.open) el.close();
+    syncDialog(ref.current, open);
   }, [open]);
 
   const runConnectionTest = useCallback(async () => {
@@ -100,6 +97,10 @@ export function TroublePanel({ open, onClose }: { open: boolean; onClose: () => 
     if (testUrl) URL.revokeObjectURL(testUrl);
     setTestUrl(null);
     let stream: MediaStream | null = null;
+    // Create the audio context inside the tap (before any await) so Safari lets it run.
+    const Ctx = getAudioContextCtor();
+    const ctx = Ctx ? new Ctx() : null;
+    void ctx?.resume?.();
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
       const mime = pickRecordingMimeType();
@@ -107,8 +108,7 @@ export function TroublePanel({ open, onClose }: { open: boolean; onClose: () => 
       const chunks: Blob[] = [];
       recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
       let peak = 0;
-      const Ctx = getAudioContextCtor();
-      const ctx = Ctx ? new Ctx() : null;
+      let measured = false;
       let raf = 0;
       if (ctx) {
         void ctx.resume?.();
@@ -119,6 +119,7 @@ export function TroublePanel({ open, onClose }: { open: boolean; onClose: () => 
         const tick = () => {
           analyser.getFloatTimeDomainData(buf);
           const lvl = rmsLevel(buf);
+          if (ctx.state === "running") measured = true;
           peak = Math.max(peak, lvl);
           setTestLevel(lvl);
           raf = requestAnimationFrame(tick);
@@ -131,14 +132,19 @@ export function TroublePanel({ open, onClose }: { open: boolean; onClose: () => 
       recorder.stop();
       await stopped;
       cancelAnimationFrame(raf);
-      await ctx?.close().catch(() => {});
       setTestLevel(0);
       const blob = new Blob(chunks, { type: recorder.mimeType || mime || "audio/webm" });
       setTestUrl(URL.createObjectURL(blob));
-      setTestResult({ outcome: !ctx ? "clear" : peak < SILENCE_LEVEL ? "silent" : peak < QUIET_LEVEL ? "quiet" : "clear", peak });
+      // If the level meter couldn't run, we can't judge loudness: ask them to listen back instead.
+      setTestResult(
+        !measured
+          ? { outcome: "clear", peak, message: "Recorded. Play it back below to check you can hear yourself." }
+          : { outcome: peak < SILENCE_LEVEL ? "silent" : peak < QUIET_LEVEL ? "quiet" : "clear", peak },
+      );
     } catch (err) {
       setTestResult({ outcome: "error", peak: 0, message: micErrorMessage(err) });
     } finally {
+      await ctx?.close().catch(() => {});
       stream?.getTracks().forEach((t) => t.stop());
       setPermission(await micPermission());
       setTesting(false);
@@ -253,7 +259,7 @@ export function TroublePanel({ open, onClose }: { open: boolean; onClose: () => 
               </div>
               {testResult && (
                 <p role="status" className="mt-3 text-sm">
-                  {testResult.outcome === "clear" && "✓ We heard you clearly."}
+                  {testResult.outcome === "clear" && (testResult.message ?? "✓ We heard you clearly.")}
                   {testResult.outcome === "quiet" && "We heard you, but very quietly."}
                   {testResult.outcome === "silent" && "We didn't hear anything."}
                   {testResult.outcome === "error" && testResult.message}

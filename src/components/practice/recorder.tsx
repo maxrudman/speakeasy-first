@@ -188,7 +188,7 @@ export function Recorder({
 
       {audioUrl && (
         <div className="mt-6">
-          <audio controls src={audioUrl} preload="metadata" className="w-full" aria-label="Your recorded answer" />
+          <PlaybackAudio src={audioUrl} />
           <p className="mt-2 text-xs text-muted">
             Your recording stays on this device. If it needs transcribing, it&apos;s sent once for that and never stored. It&apos;s
             deleted when you record again or move to the next question.
@@ -295,6 +295,35 @@ export function Recorder({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * Playback for the in-memory recording. Chrome's WebM recordings report an
+ * Infinity duration, which breaks the progress bar and seeking; jumping to the
+ * end once makes the browser work out the real length.
+ */
+function PlaybackAudio({ src }: { src: string }) {
+  const ref = useRef<HTMLAudioElement>(null);
+  return (
+    <audio
+      ref={ref}
+      controls
+      src={src}
+      preload="metadata"
+      className="w-full"
+      aria-label="Your recorded answer"
+      onLoadedMetadata={() => {
+        const el = ref.current;
+        if (!el || Number.isFinite(el.duration)) return;
+        const fix = () => {
+          el.removeEventListener("timeupdate", fix);
+          el.currentTime = 0;
+        };
+        el.addEventListener("timeupdate", fix);
+        el.currentTime = 1e101;
+      }}
+    />
   );
 }
 
