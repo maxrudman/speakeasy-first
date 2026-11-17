@@ -111,6 +111,13 @@ Server logs are one JSON line per event (search Vercel logs for `"level":"error"
 
 **Spaced repetition.** Each term sits in a box from 0 to 5. A check moves it up one box, and an X sends it back to 0. Lower boxes show up far more often. At box 5 the term is "mastered": it's retired, replaced with a new term, and comes back for review about 1 in 15 cards. All the numbers live in `src/lib/vocab-rules.ts`.
 
-**Recording and transcripts.** Audio is recorded in the browser and never leaves the device. Live transcription uses the browser's built-in speech recognition, which works best in Chrome and Edge. In other browsers, users can type or paste into the transcript box.
+**Recording and transcripts.** Audio is recorded in the browser at a low bitrate (WebM/Opus in Chrome, Edge and Firefox; MP4/AAC in Safari) with echo cancellation, noise suppression and auto gain turned on. A live level meter warns when someone sounds too quiet. Answers are limited to 5 minutes. Transcription is a cascade that falls through automatically:
+
+1. **Browser live captions** (Chrome, Edge, Safari), restarted automatically when they pause.
+2. **OpenAI Whisper** on the server, if `OPENAI_API_KEY` is set. This runs when the browser has no captions or they fell behind the speech.
+3. **Deepgram, then AssemblyAI**, if `DEEPGRAM_API_KEY` / `ASSEMBLYAI_API_KEY` are set.
+4. **Manual:** "We couldn't transcribe this one. Type or paste your answer."
+
+Each server tier has a timeout and one retry, then the next one is tried. A circuit breaker skips a provider that keeps failing. Audio goes to the server in memory only. It is never written to disk, the database or logs, and AssemblyAI copies are deleted right after. Words the transcriber wasn't sure about are shown as chips the user can tap to fix. `/api/transcribe` is rate-limited per user (30 per 10 minutes).
 
 **AI fallbacks.** Every Claude call in `src/lib/ai.ts` falls back to the built-in lists if there's no API key or the request fails, so the app never breaks because of the API.

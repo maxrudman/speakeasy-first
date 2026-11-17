@@ -80,6 +80,16 @@ export const journalEntries = pgTable(
   (t) => [index("journal_entries_user_created").on(t.userId, t.createdAt)],
 );
 
+/**
+ * Fixed-window rate limits shared by every server instance.
+ * key is "<bucket>:<userId or ip>", e.g. "transcribe:1b2c…".
+ */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+  count: integer("count").notNull().default(0),
+});
+
 export type User = typeof users.$inferSelect;
 export type VocabTerm = typeof vocabTerms.$inferSelect;
 export type JournalEntry = typeof journalEntries.$inferSelect;
