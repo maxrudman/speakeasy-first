@@ -2,6 +2,9 @@
 @import "@fontsource-variable/bricolage-grotesque";
 @import "@fontsource-variable/public-sans";
 
+/* Short screens, e.g. phones in landscape. */
+@custom-variant short (@media (max-height: 520px));
+
 /*
  * Design tokens. Change colors here and the whole app follows.
  *  paper   – page background        surface – cards and panels
@@ -86,4 +89,38 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .recording-pulse { animation: none; }
+}
+
+/*
+ * Touch screens: every control is at least 44×44px (Apple and WCAG target-size guidance),
+ * and form text is 16px so iPhone Safari doesn't zoom in when a field is focused.
+ * Mouse users keep the more compact desktop sizes.
+ */
+@media (pointer: coarse) {
+  button,
+  select,
+  summary,
+  [role="tab"],
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+    min-height: 44px;
+  }
+  button,
+  [role="tab"] {
+    min-width: 44px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Never let a long word or URL push the page sideways. */
+main {
+  overflow-wrap: anywhere;
 }

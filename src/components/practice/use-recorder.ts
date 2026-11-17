@@ -78,6 +78,9 @@ export function useRecorder() {
   const raf = useRef<number | null>(null);
   const speechMs = useRef(0);
   const quietMs = useRef(0);
+  // True once the level meter has actually measured audio. Some browsers (notably iOS
+  // Safari) can leave the audio context suspended; then we can't judge silence.
+  const meterWorked = useRef(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- browser feature detection after mount
@@ -154,12 +157,14 @@ export function useRecorder() {
         return;
       }
       // Nothing above the silence floor and nothing recognised: almost certainly a muted mic.
-      if (spokeSeconds < 0.3 && wordCount === 0) {
+      // Only trust this when the meter really ran.
+      if (meterWorked.current && spokeSeconds < 0.3 && wordCount === 0) {
         setStatus("silent");
         return;
       }
       // Tier 1 is good enough when it kept up with the speech (≥ ~0.8 words per spoken second).
-      const browserGood = wordCount >= 2 && wordCount >= Math.min(spokeSeconds, secs) * 0.8;
+      const speakingTime = meterWorked.current ? Math.min(spokeSeconds, secs) : secs * 0.6;
+      const browserGood = wordCount >= 2 && wordCount >= speakingTime * 0.8;
       if (browserGood) {
         setTier("browser");
         setWords(browserWords.current);
@@ -194,17 +199,28 @@ export function useRecorder() {
     [serverAvailable, transcribeOnServer],
   );
 
-  function startMeter(media: MediaStream) {
+  /** Must run synchronously inside the tap, before any await, or Safari keeps it suspended. */
+  function prepareMeter() {
     const Ctx = getAudioContextCtor();
     if (!Ctx) return;
     try {
-      const ctx = new Ctx();
+      audioCtx.current?.close().catch(() => {});
+      audioCtx.current = new Ctx();
+      void audioCtx.current.resume?.();
+    } catch {
+      audioCtx.current = null;
+    }
+  }
+
+  function startMeter(media: MediaStream) {
+    const ctx = audioCtx.current;
+    if (!ctx) return;
+    try {
       void ctx.resume?.();
       const source = ctx.createMediaStreamSource(media);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 1024;
       source.connect(analyser);
-      audioCtx.current = ctx;
       const buf = new Float32Array(analyser.fftSize);
       let last = performance.now();
       let smoothed = 0;
@@ -214,6 +230,7 @@ export function useRecorder() {
         last = now;
         analyser.getFloatTimeDomainData(buf);
         const lvl = rmsLevel(buf);
+        if (ctx.state === "running") meterWorked.current = true;
         smoothed = smoothed * 0.8 + lvl * 0.2;
         if (lvl > SILENCE_LEVEL) speechMs.current += dt;
         // "Too quiet": some sound, but consistently soft for 3 seconds.
@@ -306,6 +323,8 @@ export function useRecorder() {
   const start = useCallback(async () => {
     setError(null);
     setNotice(null);
+    meterWorked.current = false;
+    if (canRecord()) prepareMeter();
     if (!canRecord()) {
       setError("This browser can't record audio. You can still type your answer below, or try a recent Chrome, Edge, Safari or Firefox.");
       setStatus("manual");
@@ -323,10 +342,12 @@ export function useRecorder() {
           media = await navigator.mediaDevices.getUserMedia({ audio: true });
         } catch (err2) {
           setError(micErrorMessage(err2));
+          stopMeter();
           return;
         }
       } else {
         setError(micErrorMessage(err));
+        stopMeter();
         return;
       }
     }
@@ -398,7 +419,7 @@ export function useRecorder() {
 
     startMeter(media);
     startLiveRecognition();
-  }, [cleanupStream, releaseAudio, finishTake, stop]);
+  }, [cleanupStream, releaseAudio, finishTake, stop, stopMeter]);
 
   /** Sends the current take to the server again (for example after a thin browser transcript). */
   const retranscribe = useCallback(async () => {

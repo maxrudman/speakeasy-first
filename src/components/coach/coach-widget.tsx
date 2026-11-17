@@ -173,7 +173,7 @@ export function CoachWidget() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open the Coach"
-          className="fixed right-4 z-30 flex h-14 items-center gap-2 rounded-full bg-ink px-5 text-paper shadow-lg transition hover:scale-[1.03] bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-6 md:right-6"
+          className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 flex h-14 items-center gap-2 rounded-full bg-ink px-5 text-paper shadow-lg transition hover:scale-[1.03] motion-reduce:transition-none md:right-6 md:bottom-6"
         >
           <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M4 5h16v11H9l-5 4z" />
@@ -189,7 +189,7 @@ export function CoachWidget() {
           role="dialog"
           aria-modal="false"
           aria-labelledby="coach-title"
-          className="fixed inset-0 z-40 flex flex-col bg-surface md:inset-auto md:bottom-6 md:right-6 md:h-[min(40rem,calc(100dvh-3rem))] md:w-[26rem] md:rounded-2xl md:border md:border-line md:shadow-2xl"
+          className="fixed inset-0 z-40 flex flex-col bg-surface pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] md:inset-auto md:right-6 md:bottom-6 md:h-[min(40rem,calc(100dvh-3rem))] md:w-[26rem] md:rounded-2xl md:border md:border-line md:p-0 md:shadow-2xl short:inset-0 short:h-auto short:w-auto short:rounded-none short:border-0"
         >
           <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
             <div>

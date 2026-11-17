@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { syncDialog } from "@/components/ui";
 import { QUESTION_BANK, QUESTION_COUNT } from "@/data/question-bank";
 
 /** Side drawer listing common questions by category, with a filter box. */
@@ -17,10 +18,7 @@ export function QuestionBank({
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (open && !el.open) el.showModal();
-    if (!open && el.open) el.close();
+    syncDialog(ref.current, open);
   }, [open]);
 
   const groups = useMemo(() => {

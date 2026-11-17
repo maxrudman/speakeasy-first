@@ -138,3 +138,19 @@ Everything here is **optional and off by default**. With no keys set, each featu
 - Unsubscribe: the confirm page works, one-click unsubscribe clears the email and consent, and a forged token is rejected.
 - In the browser: the .ics download is a valid weekly event and the Google link carries the repeat rule.
 - Not tested: a real push delivery. Headless browsers can't receive notifications.
+
+## Stage 6: every device
+
+- **Touch targets:** every button, field, select, tab and summary is at least 44×44px on touch screens. Sidebar links are 44px everywhere. Desktop mouse layouts stay compact. The device audit went from 3–19 undersized targets per page to 0.
+- **iPhone:** 16px form text on touch screens (no zoom on focus), `viewport-fit=cover`, and safe-area padding on all four sides for the header, content, tab bar, Coach button and panels, in portrait and landscape.
+- **Landscape and short screens:** the Coach opens full screen when the screen is 520px tall or less.
+- **Content never hides** behind the tab bar or Coach button (bottom padding accounts for both plus the home indicator). Long words wrap instead of causing sideways scroll.
+- **Recording fixes:**
+  - iPhone Safari: the audio context is created inside the tap so the level meter works.
+  - Silence is only judged when the meter really ran, so there's no false "we didn't hear anything".
+  - Chrome/Edge: WebM playback now shows the real duration (was Infinity, which broke seeking).
+  - The troubleshooting mic test got the same Safari fix.
+- **Old browsers:** dialogs fall back to the `open` attribute where `showModal()` is missing.
+- New `docs/DEVICES.md`: what's feature-detected, the fallbacks, the browser quirks we handle, and the test matrix.
+
+**Tested:** Chromium with Playwright device emulation on 7 screen sizes (audit) and 9 browser/device profiles (full flow), including simulated no-captions and no-`MediaRecorder` browsers. Real Safari (WebKit) and Firefox (Gecko) engines weren't available, so please check a real iPhone and Android phone before the demo.
