@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { FALLBACK_TERMS, type FallbackTerm } from "@/data/fallback-terms";
 import { fallbackQuestions } from "@/data/fallback-questions";
+import { log } from "./log";
 import { VOCAB_LEVELS, type VocabLevel } from "./validation";
 
 /**
@@ -80,7 +81,7 @@ Reply with only JSON in this exact shape, no other text:
       const unique = dedupe(terms, excludeKeys).slice(0, opts.count);
       if (unique.length) return { terms: unique, source: "ai" };
     } catch (err) {
-      console.warn("[ai] generateTerms failed, using built-in terms:", (err as Error).message);
+      log.error("ai.generate_terms_failed", err, { fallback: "builtin" });
     }
   }
 
@@ -146,7 +147,7 @@ Reply with only JSON in this exact shape, no other text:
       const fresh = questions.filter((q) => !seen.has(q.toLowerCase())).slice(0, count);
       if (fresh.length) return { questions: fresh, source: "ai" };
     } catch (err) {
-      console.warn("[ai] generateQuestions failed, using built-in questions:", (err as Error).message);
+      log.error("ai.generate_questions_failed", err, { fallback: "builtin" });
     }
   }
 

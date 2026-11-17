@@ -38,7 +38,7 @@ export function Onboarding({ onDone }: { onDone: (prefs: Preferences) => void })
     setLoading(true);
     setError(null);
     try {
-      await api("/api/vocab/preferences", { method: "PUT", body: prefs });
+      await api("/api/vocab/preferences", { method: "PUT", body: prefs, timeoutMs: 70_000 });
       onDone(prefs);
     } catch (err) {
       setError((err as Error).message);

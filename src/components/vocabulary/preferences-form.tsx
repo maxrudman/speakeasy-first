@@ -29,7 +29,7 @@ export function PreferencesForm({
     setSaved(null);
     setLoading(true);
     try {
-      const result = await api<SaveResult>("/api/vocab/preferences", { method: "PUT", body: prefs });
+      const result = await api<SaveResult>("/api/vocab/preferences", { method: "PUT", body: prefs, timeoutMs: 70_000 });
       setSaved(result.added ? `Saved. ${result.added} new terms added to your deck.` : "Saved.");
       onSaved?.(prefs, result);
     } catch (err) {

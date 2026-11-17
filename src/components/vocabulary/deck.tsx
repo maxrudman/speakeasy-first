@@ -48,7 +48,7 @@ export function Deck({
     if (toppingUp.current) return;
     toppingUp.current = true;
     try {
-      const res = await api<{ terms: Term[]; source: Source; added: number }>("/api/vocab/terms/generate", { method: "POST" });
+      const res = await api<{ terms: Term[]; source: Source; added: number }>("/api/vocab/terms/generate", { method: "POST", timeoutMs: 70_000 });
       if (res.source) setSource(res.source);
       setTerms((prev) => {
         // Keep local state for terms we already have (it may be newer than the server's copy).

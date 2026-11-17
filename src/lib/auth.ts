@@ -32,9 +32,14 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   return user ?? null;
 }
 
-/** For pages: sends logged-out visitors to /login. */
+/**
+ * For pages: sends logged-out visitors to /login.
+ * If the cookie is valid but the user is gone, the cookie must be cleared first,
+ * otherwise proxy.ts sends the visitor straight back here (a redirect loop).
+ */
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
+  if (user) return user;
+  const hasCookie = Boolean((await cookies()).get(SESSION_COOKIE)?.value);
+  redirect(hasCookie ? "/api/auth/logout?reason=expired" : "/login");
 }

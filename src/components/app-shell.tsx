@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { OfflineBanner } from "./error-state";
 import { Logo } from "./logo";
 
 /**
@@ -20,6 +21,7 @@ export function AppShell({ username, children }: { username: string; children: R
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
+      <OfflineBanner />
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen self-start flex-col border-r border-line px-4 py-6 md:flex">
         <Link href="/vocabulary" className="px-2">

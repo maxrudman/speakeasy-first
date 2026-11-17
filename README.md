@@ -101,6 +101,12 @@ src/
 drizzle/                        Database migrations (commit these)
 ```
 
+## Checking that it's healthy
+
+Open `/api/health` on any deployment (for example `https://speakeasy-first.vercel.app/api/health`). It reports the database and each AI and transcription provider as `ok`, `down` or `not_configured`. It returns HTTP 503 only when the database is unreachable.
+
+Server logs are one JSON line per event (search Vercel logs for `"level":"error"`). They never contain passwords, keys, transcripts or journal text.
+
 ## How some things work
 
 **Spaced repetition.** Each term sits in a box from 0 to 5. A check moves it up one box, and an X sends it back to 0. Lower boxes show up far more often. At box 5 the term is "mastered": it's retired, replaced with a new term, and comes back for review about 1 in 15 cards. All the numbers live in `src/lib/vocab-rules.ts`.

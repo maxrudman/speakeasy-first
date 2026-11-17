@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { getCurrentUser, type CurrentUser } from "./auth";
+import { log } from "./log";
 
 /** Consistent JSON error responses for every API route. */
 export function jsonError(message: string, status = 400) {
@@ -22,10 +23,15 @@ export function withUser<Ctx>(
       if (!user) return jsonError("Your session has ended. Log in again.", 401);
       return await handler(req, user, ctx);
     } catch (err) {
-      console.error(`[api] ${req.method} ${new URL(req.url).pathname}`, err);
+      log.error("api.unhandled", err, { method: req.method, route: routeName(req) });
       return jsonError("Something went wrong on our side. Try again.", 500);
     }
   };
+}
+
+/** The path with ids replaced, so logs group by route and never include record ids. */
+export function routeName(req: Request) {
+  return new URL(req.url).pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, ":id");
 }
 
 /** Parses and validates a JSON body. Returns either data or an error response. */
