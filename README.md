@@ -1,4 +1,4 @@
-# Speak Ready
+# SpeakEasy
 
 A web app for building vocabulary and practicing spoken answers.
 
