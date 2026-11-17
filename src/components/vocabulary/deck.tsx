@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, ErrorNote, Spinner } from "@/components/ui";
 import { api } from "@/lib/client-api";
 import { applyReview, MASTERY_BOX, pickNextTerm, TARGET_ACTIVE } from "@/lib/vocab-rules";
+import { TroubleButton } from "@/components/troubleshoot/trouble-panel";
 import { PreferencesPopover } from "./preferences-popover";
 import type { Preferences } from "./preferences-form";
 
@@ -152,13 +153,16 @@ export function Deck({
             {preferences.level} terms for {preferences.field}, aimed at {preferences.audience.toLowerCase()}.
           </p>
         </div>
-        <PreferencesPopover
-          preferences={preferences}
-          onSaved={(p) => {
-            onPreferencesChange(p);
-            load();
-          }}
-        />
+        <div className="flex shrink-0 items-center gap-1">
+          <TroubleButton compact />
+          <PreferencesPopover
+            preferences={preferences}
+            onSaved={(p) => {
+              onPreferencesChange(p);
+              load();
+            }}
+          />
+        </div>
       </header>
 
       {loading ? (

@@ -74,3 +74,17 @@ Each server tier gets a timeout and one retry with backoff, and a circuit breake
 **New env vars** (optional): `ANTHROPIC_MODEL_FALLBACKS`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `SPEAKEASY_MOCK_AI`.
 
 **Tested** against a local fake Anthropic server. A 429 model was retried twice then skipped, a 500 model the same, and a bad-JSON model was re-asked and answered. With every model down, the same audience was served from cache and a new audience from the built-in list. Mock mode made no calls. The 11th bad login returned 429. The full click-test passes at desktop and phone sizes.
+
+## Stage 3: in-app troubleshooting
+
+A **"Having trouble?"** button on Practice and Vocabulary (icon-only on narrow phones) opens a side panel:
+- **What we found:** problems detected automatically, each with its exact fix. It covers: offline; non-https pages; browsers or in-app webviews that can't record; microphone blocked; silent or very quiet test recordings (including Mac and Windows privacy settings); the mic held by another app; no live captions (and whether server transcription will cover it); cookies off; a slow connection; and our servers being down or degraded.
+- **Microphone:** permission status (allowed, blocked, not decided, or unknown) and a 3-second test recording with a live level bar, a verdict ("We heard you clearly", "very quietly", "didn't hear anything") and playback. The test audio stays on the device and is freed when the panel closes.
+- **Allow the microphone:** step-by-step fixes for Chrome, Safari on iPhone (including Screen Time and "Open in Safari"), Android, Safari on Mac, Firefox and Edge. The likely platform opens first and you can switch tabs.
+- **Connection and services:** round-trip time to the app plus live status of the database and each AI and transcription provider from `/api/health`, with "Test again".
+- **Browser and device details:** a feature-detection checklist (https, getUserMedia, MediaRecorder and chosen format, live captions, level meter, cookies, clipboard, screen size, touch, language).
+- **Copy diagnostic info:** device and service checks as JSON, with no username, ids, answers or recordings.
+
+Detection uses feature checks. The user-agent string is used only to choose which instructions to open first.
+
+**Tested** in Chromium at desktop size (all clear, mic test "heard you clearly") and on an emulated Pixel 7 with a silent microphone (silent problem and fix shown, Android steps preselected). The copied diagnostics contain no username.
