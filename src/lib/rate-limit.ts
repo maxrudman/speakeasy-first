@@ -13,6 +13,7 @@ export const LIMITS = {
   ai: { limit: 40, windowSeconds: 10 * 60 },
   coach: { limit: 60, windowSeconds: 10 * 60 },
   login: { limit: 10, windowSeconds: 10 * 60 },
+  notify: { limit: 5, windowSeconds: 10 * 60 },
 } as const;
 
 export type LimitBucket = keyof typeof LIMITS;

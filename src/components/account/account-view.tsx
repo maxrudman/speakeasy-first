@@ -2,7 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AddToCalendar } from "@/components/calendar/add-to-calendar";
 import { PreferencesForm, type Preferences } from "@/components/vocabulary/preferences-form";
+import { InstallGuide } from "./install-guide";
+import { RemindersSection } from "./reminders-section";
 import { Button, ErrorNote, Notice, PageHeader, TextField } from "@/components/ui";
 import { api } from "@/lib/client-api";
 
@@ -28,6 +31,21 @@ export function AccountView({ username, preferences }: { username: string; prefe
           ) : (
             <p className="text-[15px] text-muted">Open Vocabulary to answer three quick setup questions first.</p>
           )}
+        </Section>
+
+        <Section title="Reminders" description="Optional. Off unless you turn them on.">
+          <RemindersSection />
+        </Section>
+
+        <Section title="Add practice or an interview to your calendar" description="Works with Apple Calendar, Google Calendar and Outlook.">
+          <div className="flex flex-wrap gap-2">
+            <AddToCalendar defaultKind="practice" label="Schedule practice" />
+            <AddToCalendar defaultKind="interview" label="Add an interview date" />
+          </div>
+        </Section>
+
+        <Section title="Install the app" description="Open Speak Ready from your home screen like any other app.">
+          <InstallGuide />
         </Section>
 
         <Section title="Change password">

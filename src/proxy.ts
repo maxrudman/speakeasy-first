@@ -6,10 +6,13 @@ import { SESSION_COOKIE, verifySession } from "@/lib/session";
  * Logged-out visitors are sent to /login; logged-in users skip the auth pages.
  */
 const PUBLIC_PATHS = ["/login", "/signup"];
+/** Reachable whether or not someone is logged in. */
+const OPEN_PATHS = ["/unsubscribe", "/offline"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const userId = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
+  if (OPEN_PATHS.includes(pathname)) return NextResponse.next();
   const isPublic = PUBLIC_PATHS.includes(pathname);
 
   if (!userId && !isPublic) {
@@ -22,5 +25,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|svg|ico|webp)$).*)"],
+  // Skip API routes, static files, the service worker, the web app manifest and icons.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|.*\\.(?:png|jpg|svg|ico|webp|js|json|webmanifest)$).*)"],
 };
