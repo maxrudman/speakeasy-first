@@ -1,6 +1,16 @@
 @import "tailwindcss";
-@import "@fontsource-variable/bricolage-grotesque";
-@import "@fontsource-variable/public-sans";
+
+/* "dark:" utilities follow the chosen theme, or the system when none is chosen. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
 
 /* Short screens, e.g. phones in landscape. */
 @custom-variant short (@media (max-height: 520px));
@@ -23,10 +33,33 @@
   --pine-soft: #e2eee9;
   --coral: #b4504a;
   --coral-soft: #f6e5e2;
+  /* Chart marks (validated: lightness, chroma and ≥3:1 contrast on the surface). */
+  --chart: #16805a;
+}
+
+:root {
+  color-scheme: light;
+}
+
+/* Dark theme: chosen explicitly, or following the system unless Light was chosen. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #12161c;
+  --surface: #1a2029;
+  --ink: #e7ebf0;
+  --muted: #9aa4b2;
+  --line: #2b333e;
+  --pine: #5fb394;
+  --pine-strong: #7cc6aa;
+  --pine-soft: #1d3029;
+  --coral: #e07b70;
+  --coral-soft: #3a2220;
+  --chart: #2fa877;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --paper: #12161c;
     --surface: #1a2029;
     --ink: #e7ebf0;
@@ -37,6 +70,7 @@
     --pine-soft: #1d3029;
     --coral: #e07b70;
     --coral-soft: #3a2220;
+    --chart: #2fa877;
   }
 }
 
@@ -51,8 +85,10 @@
   --color-pine-soft: var(--pine-soft);
   --color-coral: var(--coral);
   --color-coral-soft: var(--coral-soft);
-  --font-sans: "Public Sans Variable", system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque Variable", "Public Sans Variable", system-ui, sans-serif;
+  --color-chart: var(--chart);
+  /* Font files are self-hosted and preloaded by next/font (see layout.tsx). */
+  --font-sans: var(--font-public-sans), system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-public-sans), system-ui, sans-serif;
 }
 
 body {
@@ -123,4 +159,30 @@ body {
 /* Never let a long word or URL push the page sideways. */
 main {
   overflow-wrap: anywhere;
+}
+
+/* Motion: short and subtle, and off for people who ask for reduced motion. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.toast-in {
+  animation: toast-in 180ms ease-out;
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.page-in {
+  animation: page-in 220ms ease-out;
+}
+dialog[open] {
+  animation: toast-in 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-in,
+  .page-in,
+  dialog[open] {
+    animation: none;
+  }
 }

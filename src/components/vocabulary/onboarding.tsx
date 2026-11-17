@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, ErrorNote } from "@/components/ui";
 import { api } from "@/lib/client-api";
-import { VOCAB_LEVELS } from "@/lib/validation";
+import { VOCAB_LEVELS } from "@/lib/vocab-levels";
 import type { Preferences } from "./preferences-form";
 
 const LEVEL_DESCRIPTIONS: Record<(typeof VOCAB_LEVELS)[number], string> = {

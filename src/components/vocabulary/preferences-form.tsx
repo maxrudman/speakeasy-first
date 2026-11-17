@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, ErrorNote, Notice, SelectField, TextField } from "@/components/ui";
 import { api } from "@/lib/client-api";
-import { VOCAB_LEVELS } from "@/lib/validation";
+import { VOCAB_LEVELS } from "@/lib/vocab-levels";
 
 export type Preferences = { level: string; field: string; audience: string };
 export type SaveResult = { added: number; source: "ai" | "cache" | "builtin" | "mock" | null };

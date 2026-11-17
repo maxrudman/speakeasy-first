@@ -43,8 +43,9 @@ export async function withTimeout<T>(label: string, ms: number, fn: (signal: Abo
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      controller.abort();
+      // Reject first so the race settles as a timeout even if the work reacts to abort synchronously.
       reject(new TimeoutError(label, ms));
+      controller.abort();
     }, ms);
   });
   try {

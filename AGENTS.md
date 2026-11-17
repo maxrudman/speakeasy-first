@@ -16,4 +16,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - All Claude API calls go through `src/lib/ai.ts` and must keep a built-in fallback so the app works without `ANTHROPIC_API_KEY`.
 - Schema changes: edit `src/db/schema.ts`, run `npm run db:generate`, commit the migration in `/drizzle`.
 - UI: reuse `src/components/ui.tsx`; use color tokens from `src/app/globals.css` (paper, surface, ink, muted, line, pine, coral). Pages live in `src/app/(app)/<page>/page.tsx` with their UI in `src/components/<page>/`.
-- Before finishing: `npm run lint && npm run typecheck && npm run build`.
+- Before finishing: `npm run lint && npm run typecheck && npm test && npm run build`. For UI changes also run `npm run test:e2e` (needs a migrated `DATABASE_URL`).
+- AI calls go through `runJson()` / `streamText()` in `src/lib/ai-cascade.ts`; transcription through `transcribe()` in `src/lib/transcribe.ts`. Never call a provider directly.
+- Log with `log` from `src/lib/log.ts`. Never log request bodies, transcripts, journal text or keys.
+- Every optional feature must turn itself off cleanly when its env var is missing.

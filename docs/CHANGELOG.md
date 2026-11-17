@@ -154,3 +154,43 @@ Everything here is **optional and off by default**. With no keys set, each featu
 - New `docs/DEVICES.md`: what's feature-detected, the fallbacks, the browser quirks we handle, and the test matrix.
 
 **Tested:** Chromium with Playwright device emulation on 7 screen sizes (audit) and 9 browser/device profiles (full flow), including simulated no-captions and no-`MediaRecorder` browsers. Real Safari (WebKit) and Firefox (Gecko) engines weren't available, so please check a real iPhone and Android phone before the demo.
+
+## Stage 7: polish and tests
+
+**Progress**
+- New `practice_days` table (migration `0005_practice_days`) counts daily reviews, correct answers, mastered terms and saved answers in the user's own time zone. The browser sends `X-Timezone`. This gives a real, persistent **day streak**: the vocabulary "Streak" was an in-memory right-answers count that reset on reload, and is now labelled "Right in a row".
+- Account → **Your progress**: tiles for day streak, best streak, terms mastered and journal entries, plus two single-series charts (flashcards reviewed per day for 30 days, and terms mastered over time). Charts have hover, touch and arrow-key tooltips, a screen-reader summary and a "Show as table" view. The colour was validated for light and dark. The mastered line is counted back from the real total so it always matches the tile.
+
+**Polish**
+- Design system documented in `docs/DESIGN.md`. Fonts are self-hosted and preloaded with `next/font/local` (the `@fontsource` packages were removed).
+- **Dark mode:** Account → Appearance (Match my device, Light or Dark), applied before first paint with no flash. `dark:` utilities follow it.
+- **Toasts** for saves and deletes (journal, coach, practice), announced to screen readers.
+- **Skeleton loaders** shaped like the flashcard and journal entries, and smooth page and dialog transitions that respect reduced motion.
+- **Welcome tour** (5 steps), offered with a small banner on first visit and replayable from Account.
+- **Faster first paint:** Vocabulary, Journal and Account render their first data on the server. zod no longer ships to the browser. The troubleshooting panel and Coach chat load on first open.
+- **SEO kept and extended:** descriptions, Open Graph and Twitter tags, canonical URLs, `robots.txt`, a sitemap for the public pages, and `noindex` on every logged-in page.
+
+**Accessibility (WCAG 2.1 AA):** axe-core finds 0 violations on every page in light and dark mode. Fixed: list semantics in the install and troubleshooting step lists.
+
+**Lighthouse (mobile, local production build):**
+
+| Page | Performance | Accessibility | Best practices | SEO |
+|---|---|---|---|---|
+| Login | 100 | 100 | 100 | 100 |
+| Vocabulary | 92 | 100 | 100 | 63* |
+| Practice | 91 | 100 | 100 | 63* |
+| Journal | 92 | 100 | 100 | 63* |
+| Account | 90 | 100 | 100 | 63* |
+
+\*Logged-in pages are intentionally `noindex`, which Lighthouse's SEO score penalizes. The public pages score 100.
+
+**Tests**
+- `npm test`: 39 Vitest unit tests covering:
+  - the AI cascade (primary to fallback model, backoff on 5xx, re-ask on bad JSON, no retry on 4xx, cache, built-in, refusals, mock mode, no keys)
+  - the transcription cascade (Whisper confidence mapping, retry then fallback to Deepgram, no-speech, no retry on 400)
+  - retry, backoff, timeouts and the circuit breaker
+  - strict schemas, model order and log redaction
+  - spaced repetition, streaks and time zones, calendar files, reminder rules and the offline coach
+- **Bug found by the tests:** `withTimeout` aborted before rejecting, so work that settles on abort could win the race and count as success. Fixed.
+- `npm run test:e2e`: a Playwright smoke test on desktop and Pixel 7 (sign up → onboarding → flashcards → practice, record and transcript → delete-on-next → journal → coach → account progress → log out and in), a health and redirect test, and the axe accessibility test in light and dark.
+- CI runs the unit tests in the existing job, plus a new `e2e` job with Postgres.

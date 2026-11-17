@@ -3,6 +3,7 @@ import { jwtVerify, SignJWT } from "jose";
 import { sendNotification, setVapidDetails } from "web-push";
 import { log } from "./log";
 import { fetchWithTimeout } from "./providers";
+import { appUrl } from "./site";
 
 /**
  * Email (Resend or SendGrid) and Web Push. Each turns itself off when its keys
@@ -24,12 +25,7 @@ export function cronAvailable() {
   return Boolean(process.env.CRON_SECRET?.trim());
 }
 
-export function appUrl() {
-  const explicit = process.env.APP_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  return vercel ? `https://${vercel}` : "http://localhost:3000";
-}
+export { appUrl } from "./site";
 
 /* -------------------------------- Unsubscribe --------------------------------- */
 

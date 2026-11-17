@@ -20,8 +20,8 @@ export const credentialsSchema = z.object({
   password: passwordSchema,
 });
 
-export const VOCAB_LEVELS = ["Beginner", "Intermediate", "Advanced", "Expert"] as const;
-export type VocabLevel = (typeof VOCAB_LEVELS)[number];
+import { VOCAB_LEVELS } from "./vocab-levels";
+export { VOCAB_LEVELS, type VocabLevel } from "./vocab-levels";
 
 export const preferencesSchema = z.object({
   level: z.enum(VOCAB_LEVELS),

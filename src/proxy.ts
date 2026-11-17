@@ -26,5 +26,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Skip API routes, static files, the service worker, the web app manifest and icons.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|.*\\.(?:png|jpg|svg|ico|webp|js|json|webmanifest)$).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|robots.txt|sitemap.xml|.*\\.(?:png|jpg|svg|ico|webp|js|json|webmanifest)$).*)"],
 };

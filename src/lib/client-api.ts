@@ -32,7 +32,11 @@ export async function api<T>(
   try {
     res = await fetch(url, {
       method: options.method ?? "GET",
-      headers: options.body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      headers: {
+        ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        // Lets the server count practice days in the user's own time zone.
+        "X-Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+      },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
     });

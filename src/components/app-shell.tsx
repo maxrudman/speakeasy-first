@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { CoachProvider } from "./coach/coach-context";
 import { CoachWidget } from "./coach/coach-widget";
 import { OfflineBanner } from "./error-state";
+import { ToastProvider } from "./toast";
 import { Logo } from "./logo";
 
 /**
@@ -22,6 +23,7 @@ export function AppShell({ username, children }: { username: string; children: R
   const pathname = usePathname();
 
   return (
+    <ToastProvider>
     <CoachProvider>
       <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
         <OfflineBanner />
@@ -59,7 +61,10 @@ export function AppShell({ username, children }: { username: string; children: R
 
         {/* Bottom padding clears the phone tab bar, the Coach button and the iPhone home indicator. */}
         <main className="mx-auto w-full max-w-3xl pt-8 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(9.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] sm:px-8 md:pt-12 md:pb-28">
-          {children}
+          {/* Re-keyed per route so each page fades in. */}
+          <div key={pathname} className="page-in">
+            {children}
+          </div>
         </main>
 
         {/* Mobile bottom tabs */}
@@ -84,6 +89,7 @@ export function AppShell({ username, children }: { username: string; children: R
         </nav>
       </div>
     </CoachProvider>
+    </ToastProvider>
   );
 }
 

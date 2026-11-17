@@ -5,11 +5,22 @@ import { useState } from "react";
 import { AddToCalendar } from "@/components/calendar/add-to-calendar";
 import { PreferencesForm, type Preferences } from "@/components/vocabulary/preferences-form";
 import { InstallGuide } from "./install-guide";
+import { ProgressSection, type Progress } from "./progress-section";
+import { WelcomeTour, startTour } from "@/components/welcome-tour";
+import { ThemePicker } from "./theme-picker";
 import { RemindersSection } from "./reminders-section";
 import { Button, ErrorNote, Notice, PageHeader, TextField } from "@/components/ui";
 import { api } from "@/lib/client-api";
 
-export function AccountView({ username, preferences }: { username: string; preferences: Preferences | null }) {
+export function AccountView({
+  username,
+  preferences,
+  progress,
+}: {
+  username: string;
+  preferences: Preferences | null;
+  progress?: Progress | null;
+}) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -25,6 +36,10 @@ export function AccountView({ username, preferences }: { username: string; prefe
       <PageHeader title="Account" description={`Signed in as ${username}.`} />
 
       <div className="space-y-6">
+        <Section title="Your progress">
+          <ProgressSection initial={progress} />
+        </Section>
+
         <Section title="Vocabulary preferences" description="These shape which new terms you get.">
           {preferences ? (
             <PreferencesForm initial={preferences} submitLabel="Save preferences" onSaved={() => router.refresh()} />
@@ -46,6 +61,16 @@ export function AccountView({ username, preferences }: { username: string; prefe
 
         <Section title="Install the app" description="Open Speak Ready from your home screen like any other app.">
           <InstallGuide />
+        </Section>
+
+        <Section title="Appearance and help">
+          <div className="flex flex-wrap items-center gap-3">
+            <ThemePicker />
+            <Button variant="secondary" onClick={startTour}>
+              Take the tour again
+            </Button>
+          </div>
+          <WelcomeTour autoStart={false} />
         </Section>
 
         <Section title="Change password">

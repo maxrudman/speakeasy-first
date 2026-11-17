@@ -72,6 +72,8 @@ Then add your teammates under **Settings → Collaborators** on GitHub. See [CON
 | `npm run db:migrate` | Apply migrations to your database |
 | `npm run db:seed` | Create the demo account |
 | `npm run db:studio` | Browse your database in the browser |
+| `npm test` | Unit tests (Vitest): cascades, retries, circuit breaker, streaks, calendar and more |
+| `npm run test:e2e` | Playwright smoke and accessibility tests (run `npm run build` first; uses mock AI and transcription) |
 
 ## Project map
 
@@ -100,6 +102,13 @@ src/
   proxy.ts                      Redirects logged-out visitors to /login
 drizzle/                        Database migrations (commit these)
 ```
+
+## Docs
+
+- [`docs/AUDIT.md`](docs/AUDIT.md): what we found before the Nov 2026 polish
+- [`docs/CHANGELOG.md`](docs/CHANGELOG.md): what each stage changed
+- [`docs/DEVICES.md`](docs/DEVICES.md): browser and device support, and fallbacks
+- [`docs/DESIGN.md`](docs/DESIGN.md): design system, accessibility and motion rules
 
 ## Checking that it's healthy
 

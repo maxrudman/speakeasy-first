@@ -5,7 +5,7 @@ import { Button, ConfirmDialog, ErrorNote, PageHeader, Spinner } from "@/compone
 import { api } from "@/lib/client-api";
 import { AddToCalendar } from "@/components/calendar/add-to-calendar";
 import { useCoach } from "@/components/coach/coach-context";
-import { TroubleButton } from "@/components/troubleshoot/trouble-panel";
+import { TroubleButton } from "@/components/troubleshoot/trouble-button";
 import { AudiencePanel, type Audience } from "./audience-panel";
 import { Recorder } from "./recorder";
 import { useRecorder } from "./use-recorder";
