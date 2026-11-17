@@ -15,8 +15,15 @@ const PROFILES = [
   { level: "Beginner", field: "nursing", audience: "patients' families" },
 ];
 
+const PASTED_LIST = `Nursing vocabulary – week 3
+1. Triage
+2. vital signs
+- care plan: the written plan for a patient's care and goals
+• medication reconciliation, informed consent
+hemodynamic stability`;
+
 async function main() {
-  const { generateTerms } = await import("../src/lib/ai");
+  const { generateTerms, extractListTerms } = await import("../src/lib/ai");
   const { countMix, mixFor, splitFields, termKey } = await import("../src/lib/vocab-tailoring");
   let failures = 0;
   const check = (ok: boolean, label: string) => {
@@ -54,6 +61,25 @@ async function main() {
       owned.push(...keys);
     }
   }
+
+  console.log("\n=== Import: pasted list (Beginner / nursing / patients' families) ===");
+  console.log(PASTED_LIST.split("\n").map((l) => `  | ${l}`).join("\n"));
+  const alreadyOwned = ["Triage"];
+  const { terms, source } = await extractListTerms({
+    ...PROFILES[2],
+    source: { kind: "text", text: PASTED_LIST },
+    max: 30,
+    exclude: alreadyOwned,
+  });
+  console.log(`\nImported (source: ${source}; user already had "Triage"):`);
+  for (const t of terms) console.log(`- ${t.term} (${t.partOfSpeech || "?"}): ${t.definition}\n    "${t.example}"`);
+  const keys = terms.map((t) => termKey(t.term));
+  check(!keys.includes("triage"), "skips a term the user already has");
+  check(new Set(keys).size === keys.length, "no duplicates");
+  check(
+    keys.every((k) => PASTED_LIST.toLowerCase().includes(k)),
+    "every imported term appears in the pasted list",
+  );
 
   console.log(failures ? `\n${failures} check(s) failed.` : "\nAll checks passed.");
   process.exit(failures ? 1 : 0);

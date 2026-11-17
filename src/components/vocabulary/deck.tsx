@@ -158,6 +158,7 @@ export function Deck({
             onPreferencesChange(p);
             load();
           }}
+          onImported={load}
         />
       </header>
 

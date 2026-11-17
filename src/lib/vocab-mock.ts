@@ -7,7 +7,7 @@ import {
   MOCK_GENERIC_FIELD,
   type MockEntry,
 } from "@/data/mock-terms";
-import { splitFields, type TailoredTerm } from "./vocab-tailoring";
+import { splitFields, termKey, type ListTerm, type TailoredTerm } from "./vocab-tailoring";
 import { VOCAB_LEVELS, type VocabLevel } from "./validation";
 
 /**
@@ -71,4 +71,48 @@ export function mockCandidates(opts: { level: string; field: string; audience: s
   const broad = FALLBACK_TERMS[level].map((e) => make(e, "broad", []));
 
   return [...bridges, ...interleave(perField), ...audience, ...broad];
+}
+
+/**
+ * Mock version of importing a user's list. Reads one term per line (or comma-separated),
+ * understands "term - definition" / "term: definition" glossary lines, and never invents terms.
+ * Definitions come from the list itself or the mock data; otherwise it says plainly that it's a mock.
+ */
+export function mockListTerms(opts: { text: string; field: string; audience: string; max: number }): ListTerm[] {
+  const known = new Map<string, MockEntry>();
+  for (const e of [
+    ...MOCK_FIELD_BANKS.flatMap((b) => b.terms),
+    ...MOCK_BRIDGES.map((b) => b.entry),
+    ...MOCK_AUDIENCE_BANKS.flatMap((b) => b.terms),
+    ...Object.values(FALLBACK_TERMS).flat(),
+  ]) {
+    known.set(termKey(e.term), e);
+  }
+
+  const out: ListTerm[] = [];
+  for (const rawLine of opts.text.split(/\r?\n/)) {
+    const line = rawLine.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim();
+    if (!line) continue;
+    const glossary = line.match(/^(.{2,60}?)\s*(?:\s[-–—]\s|:)\s*(.{10,})$/);
+    const entries: { term: string; definition?: string }[] = glossary
+      ? [{ term: glossary[1], definition: glossary[2] }]
+      : line.split(/[,;]/).map((t) => ({ term: t }));
+    for (const { term: rawTerm, definition } of entries) {
+      const term = rawTerm.trim().replace(/[.]+$/, "");
+      if (!/\p{L}/u.test(term) || term.length > 60 || term.split(/\s+/).length > 5) continue;
+      // Skip lines that look like a heading ("Nursing vocabulary – week 3"), as Claude would.
+      if (/\d|\b(vocabulary|glossary|terms|chapter|unit|week|lesson)\b/i.test(term)) continue;
+      const match = known.get(termKey(term));
+      out.push({
+        term,
+        partOfSpeech: match?.partOfSpeech ?? "",
+        definition: (definition?.trim() || match?.definition || "Mock mode: no definition yet. Turn off SPEAKEASY_MOCK_AI to get a real one.").slice(0, 300),
+        example: match
+          ? fill(match.example, opts.field, opts.audience)
+          : `(Mock example) In ${opts.field.toLowerCase()}, I'd use "${term}" when speaking with ${opts.audience.toLowerCase()}.`,
+      });
+      if (out.length >= opts.max) return out;
+    }
+  }
+  return out;
 }

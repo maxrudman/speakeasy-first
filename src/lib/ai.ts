@@ -4,16 +4,23 @@ import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { FALLBACK_TERMS, type FallbackTerm } from "@/data/fallback-terms";
 import { fallbackQuestions } from "@/data/fallback-questions";
+import { ImportError } from "./list-source";
 import { VOCAB_LEVELS, type VocabLevel } from "./validation";
-import { isMockAi, mockCandidates } from "./vocab-mock";
+import { isMockAi, mockCandidates, mockListTerms } from "./vocab-mock";
 import {
+  appearsIn,
   buildGenerationPrompt,
+  buildImportPrompt,
+  cleanListTerms,
   cleanTerms,
   GENERATION_SYSTEM_PROMPT,
+  IMPORT_SYSTEM_PROMPT,
+  listTermsWireSchema,
   mixFor,
   selectBatch,
   tailoredTermsWireSchema,
   termKey,
+  type ListTerm,
   type TailoredTerm,
 } from "./vocab-tailoring";
 
@@ -172,6 +179,68 @@ function dedupe<T extends { term: string }>(terms: T[], exclude: Set<string>): T
     seen.add(key);
     return true;
   });
+}
+
+/* ----------------------------- Importing a user's own list ----------------------------- */
+
+/**
+ * Pulls the real vocabulary terms out of a list the user already has (text, or a PDF),
+ * and writes a plain definition and a sayable example for each. Terms not found in the
+ * list's text are dropped, so nothing is made up.
+ */
+export async function extractListTerms(opts: {
+  level: string;
+  field: string;
+  audience: string;
+  source: { kind: "text"; text: string } | { kind: "pdf"; data: Buffer };
+  max: number;
+  exclude: string[];
+}): Promise<{ terms: ListTerm[]; source: AiSource }> {
+  const excludeKeys = new Set(opts.exclude.map(termKey));
+  const fresh = (terms: ListTerm[]) => dedupe(terms, excludeKeys);
+
+  if (isMockAi()) {
+    if (opts.source.kind !== "text") {
+      throw new ImportError("Mock mode can't read PDFs. Paste the words instead, or turn off SPEAKEASY_MOCK_AI.");
+    }
+    const all = mockListTerms({ text: opts.source.text, field: opts.field, audience: opts.audience, max: 500 });
+    return { terms: fresh(all).slice(0, opts.max), source: "mock" };
+  }
+
+  if (!getClient()) {
+    throw new ImportError(
+      "Importing your own list needs the AI service, which isn't set up yet. Your deck still gets tailored terms.",
+    );
+  }
+
+  const prompt = buildImportPrompt({
+    ...opts,
+    exclude: [...excludeKeys],
+    listText: opts.source.kind === "text" ? opts.source.text : undefined,
+  });
+  const content: Anthropic.ContentBlockParam[] =
+    opts.source.kind === "pdf"
+      ? [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: opts.source.data.toString("base64") } },
+          { type: "text", text: prompt },
+        ]
+      : [{ type: "text", text: prompt }];
+
+  let raw: unknown[];
+  try {
+    ({ terms: raw } = await askStructured({ system: IMPORT_SYSTEM_PROMPT, content, schema: listTermsWireSchema, label: "extractListTerms" }));
+  } catch (err) {
+    console.warn("[ai] extractListTerms failed:", (err as Error).message);
+    throw new ImportError("We couldn't read terms from your list right now. Try again in a minute, or paste the words instead.");
+  }
+
+  let terms = cleanListTerms(raw);
+  // Only keep terms that really appear in the list. (A PDF's text isn't available to check here.)
+  if (opts.source.kind === "text") {
+    const text = opts.source.text;
+    terms = terms.filter((t) => appearsIn(t.term, text));
+  }
+  return { terms: fresh(terms).slice(0, opts.max), source: "ai" };
 }
 
 /* ------------------------------- Practice questions ------------------------------ */

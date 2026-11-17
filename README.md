@@ -2,7 +2,7 @@
 
 A web app for building vocabulary and practicing spoken answers.
 
-- **Vocabulary**: flashcards tailored to your level, field, and audience, with spaced repetition. Terms you keep getting right are retired and replaced with new ones.
+- **Vocabulary**: flashcards tailored to your level, field, and audience, with spaced repetition. Terms you keep getting right are retired and replaced with new ones. You can also add terms from a vocabulary list you already have (a link or pasted words).
 - **Practice**: describe your audience, get tailored interview questions, record your answer, play it back, and copy the transcript.
 - **Journal**: save your best answers. Includes a bank of about 100 common questions.
 - **Account**: username and password login. Every user's data is private to them.
@@ -99,6 +99,7 @@ src/
     ai.ts                       All Claude API calls, with fallbacks
     vocab-tailoring.ts          How terms are tailored: prompts, the 60/20/20 mix, de-duplication
     vocab-mock.ts               SPEAKEASY_MOCK_AI sample terms (data in data/mock-terms.ts)
+    list-source.ts              Safely fetches a vocabulary list from a link
     vocab-rules.ts              Spaced repetition rules (tweak the numbers here)
     auth.ts, session.ts         Login sessions
   proxy.ts                      Redirects logged-out visitors to /login
@@ -112,5 +113,7 @@ drizzle/                        Database migrations (commit these)
 **Recording and transcripts.** Audio is recorded in the browser and never leaves the device. Live transcription uses the browser's built-in speech recognition, which works best in Chrome and Edge. In other browsers, users can type or paste into the transcript box.
 
 **Tailored vocabulary.** Each batch of new terms is about 60% field terms (spread across every field you list, with at least one "bridge" term connecting them), 20% terms that land well with your audience, and 20% broad professional vocabulary, pitched at your level. A batch of 10 is 6/2/2 and the 5 added on a settings change are 3/1/1. A term you've had before, including removed ones, never comes back.
+
+**Importing your own list.** In the Preferences menu (and as an optional last step of setup), you can paste a link to a vocabulary list or the words themselves. Only terms that appear in the list are added, up to 30 at a time, each with a plain definition and an example for your audience. Links must be public http(s) pages; private and internal addresses are refused, and the link isn't saved.
 
 **AI fallbacks.** Every Claude call in `src/lib/ai.ts` falls back to the built-in lists if there's no API key or the request fails, so the app never breaks because of the API.

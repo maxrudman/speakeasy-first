@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ImportForm } from "./import-form";
 import { PreferencesForm, type Preferences } from "./preferences-form";
 
 /** Gear button in the corner of the Vocabulary page that opens the preferences form. */
 export function PreferencesPopover({
   preferences,
   onSaved,
+  onImported,
 }: {
   preferences: Preferences;
   onSaved: (p: Preferences) => void;
+  onImported?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -52,7 +55,7 @@ export function PreferencesPopover({
         <div
           role="dialog"
           aria-label="Vocabulary preferences"
-          className="absolute right-0 top-12 z-30 w-[min(88vw,20rem)] rounded-2xl border border-line bg-surface p-5 shadow-xl"
+          className="absolute right-0 top-12 z-30 max-h-[calc(100dvh-7rem)] w-[min(88vw,20rem)] overflow-y-auto rounded-2xl border border-line bg-surface p-5 shadow-xl"
         >
           <p className="mb-4 text-sm text-muted">Change these and new terms will match. Your current terms stay.</p>
           <PreferencesForm
@@ -64,6 +67,16 @@ export function PreferencesPopover({
               setOpen(false);
             }}
           />
+          <details className="group mt-5 border-t border-line pt-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
+              Add your own vocabulary
+              <span className="text-xs font-normal text-muted group-open:hidden">Optional</span>
+            </summary>
+            <p className="mb-4 mt-2 text-sm text-muted">
+              Have a list for your field? Add its terms to your deck, with definitions and examples for your audience.
+            </p>
+            <ImportForm onImported={() => onImported?.()} />
+          </details>
         </div>
       )}
     </div>
