@@ -109,6 +109,8 @@ Server logs are one JSON line per event (search Vercel logs for `"level":"error"
 
 ## How some things work
 
+**Coach.** The floating Coach (bottom right on every page) streams replies through the same AI cascade. It knows the user's level, field, audience, vocabulary progress, practice settings, the answer on screen and recent journal entries. It critiques answers, rewrites them, changes question difficulty, explains words and runs mock interviews. History is stored per user in `coach_messages`, and the user can clear it. With no AI available, a built-in coach still measures pace, filler words and structure.
+
 **Spaced repetition.** Each term sits in a box from 0 to 5. A check moves it up one box, and an X sends it back to 0. Lower boxes show up far more often. At box 5 the term is "mastered": it's retired, replaced with a new term, and comes back for review about 1 in 15 cards. All the numbers live in `src/lib/vocab-rules.ts`.
 
 **Recording and transcripts.** Audio is recorded in the browser at a low bitrate (WebM/Opus in Chrome, Edge and Firefox; MP4/AAC in Safari) with echo cancellation, noise suppression and auto gain turned on. A live level meter warns when someone sounds too quiet. Answers are limited to 5 minutes. Transcription is a cascade that falls through automatically:

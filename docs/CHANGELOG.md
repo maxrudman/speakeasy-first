@@ -88,3 +88,18 @@ A **"Having trouble?"** button on Practice and Vocabulary (icon-only on narrow p
 Detection uses feature checks. The user-agent string is used only to choose which instructions to open first.
 
 **Tested** in Chromium at desktop size (all clear, mic test "heard you clearly") and on an emulated Pixel 7 with a silent microphone (silent problem and fix shown, Android steps preselected). The copied diagnostics contain no username.
+
+## Stage 4: AI Coach
+
+A floating **Coach** button sits on every logged-in page (bottom right, above the phone tab bar). It opens a chat panel: full screen on phones, a 26rem panel on desktop.
+
+- **Streams replies** through the AI cascade (`streamText()` in `src/lib/ai-cascade.ts`): mock → `ANTHROPIC_MODEL` → fallbacks → OpenAI → built-in. A tier that fails before its first word is retried once on 429, 5xx or timeout, then the next tier answers. A reply cut off mid-stream ends with a short note instead of breaking.
+- **Knows the user:** level, field, audience, vocabulary progress (counts, often-missed and recently mastered terms), practice settings, the question on screen, the latest answer and how long it took, the revealed flashcard, and the 4 most recent journal entries. These are sent as context in the system prompt and treated as information, not instructions.
+- **Can:** critique an answer (structure/STAR, specificity, concision, filler words, pacing in words per minute), rewrite it in the user's voice without inventing achievements, give harder or easier questions, explain a word, and run a one-question-at-a-time mock interview. It works for any field and format.
+- **Shortcuts** adapt to the page: *Critique my answer* and *Rewrite it* when there's a transcript, *Explain "term"* when a card is revealed, plus *Mock interview*, *Harder* and *Easier questions*. A **Get coach feedback** button sits next to the Practice transcript.
+- Every reply has **Save to journal** (the prompt is the question on screen, or your message) and **Copy**.
+- **Stays on topic:** off-topic requests are redirected to speaking practice, with no legal, medical or financial advice. Messages are capped at 6,000 characters and 60 per user per 10 minutes.
+- **History per user** in the new `coach_messages` table (migration `0003_coach_messages`). The last 20 turns go to the model. **Clear** deletes it after a confirmation, and account deletion cascades.
+- **Offline coach:** with every provider down, a critique still measures length, pace, filler words, sentence length, specifics and STAR structure, and other requests get practical next steps.
+
+**Tested** against a local fake streaming Anthropic server. The primary model failed with 500 and was retried, then the fallback model streamed a reply that mentioned the user's field. Explain-the-card, Save to journal, history after reload and Clear all worked at desktop and phone sizes. With all models down, the built-in critique was correct (5 fillers, 124 wpm).

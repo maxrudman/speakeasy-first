@@ -49,7 +49,9 @@ export async function parseBody<T extends z.ZodType>(
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     const field = first?.path.join(".");
-    return { error: jsonError(field ? `${field}: ${first.message}` : "Invalid request.") };
+    // Messages written as full sentences ("That message is too long.") are shown as-is.
+    const sentence = /^[A-Z]/.test(first?.message ?? "");
+    return { error: jsonError(sentence ? first.message : field ? `${field}: ${first.message}` : "Invalid request.") };
   }
   return { data: parsed.data };
 }

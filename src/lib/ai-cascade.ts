@@ -250,3 +250,169 @@ export function describeAiTiers() {
   return [...modelTiers(process.env).map((t) => `${t.kind}:${t.model}`), "cache", "builtin"];
 }
 
+
+/* ------------------------------------ Streaming ------------------------------------ */
+
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
+const FIRST_TOKEN_TIMEOUT_MS = 20_000;
+const STREAM_BUDGET_MS = 55_000;
+
+/** Yields text pieces from one model tier. Throws before the first piece if the tier fails. */
+async function* streamTier(tier: AiTier, system: string, turns: ChatTurn[], maxTokens: number, signal: AbortSignal): AsyncGenerator<string> {
+  if (tier.kind === "anthropic") {
+    const client = anthropicClient();
+    if (!client) throw new ProviderError("Anthropic not configured", false);
+    const plain = compatModels.has(tier.model);
+    try {
+      const stream = client.messages.stream(
+        {
+          model: tier.model,
+          max_tokens: maxTokens,
+          system,
+          messages: turns,
+          ...(plain ? {} : { output_config: { effort: "low" as const } }),
+        },
+        { signal },
+      );
+      for await (const event of stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") yield event.delta.text;
+        if (event.type === "message_delta" && event.delta.stop_reason === "refusal") {
+          throw new ProviderError("Model declined the request", false);
+        }
+      }
+      return;
+    } catch (err) {
+      if (err instanceof ProviderError) throw err;
+      if (err instanceof Anthropic.APIError) {
+        if (err.status === 400 && !plain) {
+          compatModels.add(tier.model);
+          yield* streamTier(tier, system, turns, maxTokens, signal);
+          return;
+        }
+        const status = err.status ?? 0;
+        throw new ProviderError(`Anthropic HTTP ${status || "connection error"}`, status === 0 || isRetryableStatus(status), status);
+      }
+      throw err;
+    }
+  }
+
+  const key = providerKey("openai");
+  if (!key) throw new ProviderError("OpenAI not configured", false);
+  const res = await fetch(`${openAiBaseUrl()}/chat/completions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: tier.model, max_tokens: Math.min(maxTokens, 4000), stream: true, messages: [{ role: "system", content: system }, ...turns] }),
+    signal,
+  });
+  if (!res.ok || !res.body) throw new ProviderError(`OpenAI HTTP ${res.status}`, isRetryableStatus(res.status), res.status);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const data = line.replace(/^data:\s*/, "").trim();
+      if (!data || data === "[DONE]" || !line.startsWith("data:")) continue;
+      try {
+        const piece = (JSON.parse(data) as { choices?: { delta?: { content?: string } }[] }).choices?.[0]?.delta?.content;
+        if (piece) yield piece;
+      } catch {
+        /* partial line */
+      }
+    }
+  }
+}
+
+/**
+ * Streams a chat reply through the same cascade as runJson():
+ * mock → models in order → built-in reply. A tier that fails before its first
+ * word is retried once on 429/5xx, then the next tier takes over. If a tier
+ * fails mid-reply, the user gets a short note instead of a broken message.
+ * `onDone` receives the full text and the tier that answered (for saving + logs).
+ */
+export function streamText(opts: {
+  task: string;
+  system: string;
+  turns: ChatTurn[];
+  maxTokens?: number;
+  builtin: () => string;
+  onDone: (text: string, source: AiSource, tier: string) => Promise<void> | void;
+}): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const started = Date.now();
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let full = "";
+      const emit = (s: string) => {
+        full += s;
+        controller.enqueue(encoder.encode(s));
+      };
+      const finish = async (source: AiSource, tier: string) => {
+        log.info("ai.answered", { task: opts.task, source, tier, ms: Date.now() - started });
+        try {
+          await opts.onDone(full, source, tier);
+        } catch (err) {
+          log.error("ai.stream_save_failed", err, { task: opts.task });
+        }
+        controller.close();
+      };
+      const builtinReply = async (source: AiSource) => {
+        const text = opts.builtin();
+        for (const piece of text.match(/[\s\S]{1,40}/g) ?? []) emit(piece);
+        await finish(source, source);
+      };
+
+      if (isMockAi()) return builtinReply("mock");
+
+      for (const tier of modelTiers(process.env)) {
+        const label = `${tier.kind}:${tier.model}`;
+        const breaker = breakerFor(`ai:${label}`);
+        if (breaker.isOpen) continue;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (Date.now() - started > STREAM_BUDGET_MS - 10_000) break;
+          const abort = new AbortController();
+          const firstTokenTimer = setTimeout(() => abort.abort(), FIRST_TOKEN_TIMEOUT_MS);
+          const budgetTimer = setTimeout(() => abort.abort(), STREAM_BUDGET_MS - (Date.now() - started));
+          let started_ = false;
+          try {
+            for await (const piece of streamTier(tier, opts.system, opts.turns, opts.maxTokens ?? 2000, abort.signal)) {
+              if (!started_) {
+                started_ = true;
+                clearTimeout(firstTokenTimer);
+              }
+              emit(piece);
+            }
+            clearTimeout(firstTokenTimer);
+            clearTimeout(budgetTimer);
+            if (!started_) throw new ProviderError("Empty reply", true);
+            breaker.success();
+            return finish("ai", label);
+          } catch (err) {
+            clearTimeout(firstTokenTimer);
+            clearTimeout(budgetTimer);
+            if (started_) {
+              // Part of the reply already reached the user: close it cleanly.
+              log.error("ai.stream_interrupted", err, { task: opts.task, tier: label });
+              emit("\n\n(The connection to the coach dropped. Ask again to continue.)");
+              return finish("ai", label);
+            }
+            const retryable = (err as Error).name === "AbortError" || (err instanceof ProviderError && err.retryable);
+            log.error("ai.tier_failed", err, { task: opts.task, tier: label, attempt: attempt + 1 });
+            if (!retryable || attempt === 1) {
+              breaker.failure();
+              break;
+            }
+            await new Promise((r) => setTimeout(r, 600 + Math.random() * 400));
+          }
+        }
+      }
+      return builtinReply("builtin");
+    },
+  });
+}

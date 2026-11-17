@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ConfirmDialog, ErrorNote, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/client-api";
+import { useCoach } from "@/components/coach/coach-context";
 import { TroubleButton } from "@/components/troubleshoot/trouble-panel";
 import { AudiencePanel, type Audience } from "./audience-panel";
 import { Recorder } from "./recorder";
@@ -25,6 +26,7 @@ export function PracticeView() {
   const fetchingMore = useRef(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const recorder = useRecorder();
+  const { update: updateCoach } = useCoach();
 
   // Remember the last audience on this device so it doesn't need retyping.
   useEffect(() => {
@@ -132,6 +134,20 @@ export function PracticeView() {
 
   const question = questions[index] ?? null;
   const atEnd = index >= questions.length - 1;
+
+  // Tell the Coach what's on screen so "Critique my answer" etc. work from anywhere.
+  const { transcript, seconds, state: recState } = recorder;
+  useEffect(() => {
+    updateCoach({
+      question,
+      purpose: audience?.purpose ?? null,
+      role: audience?.role ?? null,
+      specifications: audience?.specifications ?? null,
+      answer: recState === "recording" ? null : transcript || null,
+      answerSeconds: recState === "recorded" ? seconds : null,
+    });
+  }, [question, audience, transcript, seconds, recState, updateCoach]);
+  useEffect(() => () => updateCoach({ question: null, answer: null, answerSeconds: null }), [updateCoach]);
 
   return (
     <>

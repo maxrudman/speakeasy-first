@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useCoach } from "@/components/coach/coach-context";
 import { Button, ErrorNote, Notice, Spinner } from "@/components/ui";
 import { api } from "@/lib/client-api";
 import { MAX_RECORDING_SECONDS } from "@/lib/audio-limits";
@@ -56,6 +57,7 @@ export function Recorder({
   const [savedFor, setSavedFor] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { ask } = useCoach();
   const recording = state === "recording";
   const transcribing = status === "transcribing";
   const shownTranscript = recording ? `${transcript}${interimText ? ` ${interimText}` : ""}`.trim() : transcript;
@@ -261,6 +263,18 @@ export function Recorder({
               title={!question ? "Get a question first to save this answer with it" : undefined}
             >
               {saved ? "Saved to journal" : "Save to journal"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!transcript || recording || transcribing}
+              onClick={() =>
+                ask(
+                  `Please critique my answer.\n${question ? `Question: ${question}\n` : ""}${state === "recorded" && seconds ? `Spoken in about ${seconds} seconds.\n` : ""}My answer: ${transcript}`,
+                )
+              }
+            >
+              Get coach feedback
             </Button>
             {serverAvailable && state === "recorded" && !transcribing && (tier === "browser" || tier === "manual") && (
               <Button variant="ghost" size="sm" onClick={retranscribe}>

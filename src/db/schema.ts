@@ -111,6 +111,22 @@ export const aiCache = pgTable(
   (t) => [index("ai_cache_lookup").on(t.userId, t.task, t.profileKey, t.createdAt)],
 );
 
+/** The user's conversation with the Coach. Deleted with "Clear history" or with the account. */
+export const coachMessages = pgTable(
+  "coach_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ["user", "assistant"] }).notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("coach_messages_user_created").on(t.userId, t.createdAt)],
+);
+
 export type User = typeof users.$inferSelect;
+export type CoachMessage = typeof coachMessages.$inferSelect;
 export type VocabTerm = typeof vocabTerms.$inferSelect;
 export type JournalEntry = typeof journalEntries.$inferSelect;
