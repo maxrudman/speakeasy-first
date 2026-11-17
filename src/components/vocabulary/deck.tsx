@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, ErrorNote, Spinner } from "@/components/ui";
 import { api } from "@/lib/client-api";
 import { applyReview, MASTERY_BOX, pickNextTerm, TARGET_ACTIVE } from "@/lib/vocab-rules";
+import { useCoach } from "@/components/coach/coach-context";
 import { TroubleButton } from "@/components/troubleshoot/trouble-panel";
 import { PreferencesPopover } from "./preferences-popover";
 import type { Preferences } from "./preferences-form";
@@ -41,6 +42,12 @@ export function Deck({
   const toppingUp = useRef(false);
 
   const current = useMemo(() => terms.find((t) => t.id === currentId) ?? null, [terms, currentId]);
+  const { update: updateCoach } = useCoach();
+  // The Coach can explain the card on screen, but only once it's been revealed (no spoilers).
+  useEffect(() => {
+    updateCoach({ currentTerm: current && revealed ? current.term : null });
+  }, [current, revealed, updateCoach]);
+  useEffect(() => () => updateCoach({ currentTerm: null }), [updateCoach]);
   const activeCount = terms.filter((t) => t.status === "active").length;
   const masteredCount = terms.filter((t) => t.status === "retired").length;
 

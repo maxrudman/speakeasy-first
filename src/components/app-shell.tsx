@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { CoachProvider } from "./coach/coach-context";
+import { CoachWidget } from "./coach/coach-widget";
 import { OfflineBanner } from "./error-state";
 import { Logo } from "./logo";
 
@@ -20,14 +22,48 @@ export function AppShell({ username, children }: { username: string; children: R
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
-      <OfflineBanner />
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen self-start flex-col border-r border-line px-4 py-6 md:flex">
-        <Link href="/vocabulary" className="px-2">
+    <CoachProvider>
+      <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
+        <OfflineBanner />
+        <CoachWidget />
+        {/* Desktop sidebar */}
+        <aside className="sticky top-0 hidden h-screen self-start flex-col border-r border-line px-4 py-6 md:flex">
+          <Link href="/vocabulary" className="px-2">
+            <Logo />
+          </Link>
+          <nav aria-label="Main" className="mt-10 flex flex-col gap-1">
+            {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+              const active = pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] transition-colors ${
+                    active ? "bg-surface font-medium text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  <Icon className={`size-[18px] ${active ? "text-pine" : ""}`} />
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+          <p className="mt-auto truncate px-3 text-sm text-muted">Signed in as {username}</p>
+        </aside>
+
+        {/* Mobile top bar */}
+        <header className="sticky top-0 z-20 flex h-14 items-center border-b border-line bg-paper/90 px-4 backdrop-blur md:hidden">
           <Logo />
-        </Link>
-        <nav aria-label="Main" className="mt-10 flex flex-col gap-1">
+        </header>
+
+        <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-8 sm:px-8 md:pb-16 md:pt-12">{children}</main>
+
+        {/* Mobile bottom tabs */}
+        <nav
+          aria-label="Main"
+          className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        >
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);
             return (
@@ -35,47 +71,16 @@ export function AppShell({ username, children }: { username: string; children: R
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] transition-colors ${
-                  active ? "bg-surface font-medium text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink"
-                }`}
+                className={`flex flex-col items-center gap-1 py-2.5 text-xs ${active ? "text-pine" : "text-muted"}`}
               >
-                <Icon className={`size-[18px] ${active ? "text-pine" : ""}`} />
+                <Icon className="size-5" />
                 {label}
               </Link>
             );
           })}
         </nav>
-        <p className="mt-auto truncate px-3 text-sm text-muted">Signed in as {username}</p>
-      </aside>
-
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex h-14 items-center border-b border-line bg-paper/90 px-4 backdrop-blur md:hidden">
-        <Logo />
-      </header>
-
-      <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-8 sm:px-8 md:pb-16 md:pt-12">{children}</main>
-
-      {/* Mobile bottom tabs */}
-      <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
-      >
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={`flex flex-col items-center gap-1 py-2.5 text-xs ${active ? "text-pine" : "text-muted"}`}
-            >
-              <Icon className="size-5" />
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+      </div>
+    </CoachProvider>
   );
 }
 
