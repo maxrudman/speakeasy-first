@@ -7,7 +7,7 @@ export function Logo({ className = "" }: { className?: string }) {
         <rect x="8.4" y="3" width="3.2" height="14" rx="1.6" fill="currentColor" />
         <rect x="14.8" y="6" width="3.2" height="9" rx="1.6" fill="currentColor" />
       </svg>
-      Speak Ready
+      SpeakEasy
     </span>
   );
 }

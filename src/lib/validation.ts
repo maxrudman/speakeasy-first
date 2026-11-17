@@ -29,6 +29,12 @@ export const preferencesSchema = z.object({
   audience: z.string().trim().min(2, "is required").max(120),
 });
 
+/** Optional "Add your own vocabulary": a link to a list, or the words pasted in. */
+export const vocabImportSchema = z.object({
+  url: z.string().trim().max(2000, "is too long").default(""),
+  text: z.string().trim().max(20000, "is too long (20,000 characters max)").default(""),
+});
+
 export const reviewSchema = z.object({
   correct: z.boolean(),
 });

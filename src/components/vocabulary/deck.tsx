@@ -20,7 +20,7 @@ export type Term = {
   timesWrong: number;
 };
 
-type Source = "ai" | "builtin" | null;
+type Source = "ai" | "builtin" | "mock" | null;
 
 export function Deck({
   preferences,
@@ -158,6 +158,7 @@ export function Deck({
             onPreferencesChange(p);
             load();
           }}
+          onImported={load}
         />
       </header>
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, ErrorNote } from "@/components/ui";
 import { api } from "@/lib/client-api";
 import { VOCAB_LEVELS } from "@/lib/validation";
+import { ImportForm } from "./import-form";
 import type { Preferences } from "./preferences-form";
 
 const LEVEL_DESCRIPTIONS: Record<(typeof VOCAB_LEVELS)[number], string> = {
@@ -27,6 +28,35 @@ export function Onboarding({ onDone }: { onDone: (prefs: Preferences) => void })
   const [prefs, setPrefs] = useState<Preferences>({ level: "", field: "", audience: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // After the three questions, an optional, skippable step to import the user's own list.
+  const [deckBuilt, setDeckBuilt] = useState(false);
+  const [imported, setImported] = useState(false);
+
+  if (deckBuilt) {
+    return (
+      <div className="mx-auto max-w-xl pt-4 sm:pt-10">
+        <div className="mb-10 flex gap-1.5" aria-hidden="true">
+          {STEPS.map((s) => (
+            <span key={s.key} className="h-1 flex-1 rounded-full bg-pine" />
+          ))}
+        </div>
+        <p className="text-sm text-muted">Optional</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">Add your own vocabulary</h1>
+        <p className="mt-3 text-[15px] text-muted">
+          Your deck is ready. If you already have a vocabulary list for your field, add it here and we&apos;ll write a
+          plain definition and an example for each term. You can also do this later from Preferences.
+        </p>
+        <div className="mt-8">
+          <ImportForm onImported={() => setImported(true)} />
+        </div>
+        <div className="mt-10 flex justify-end">
+          <Button variant={imported ? "primary" : "ghost"} onClick={() => onDone(prefs)}>
+            {imported ? "Go to my deck" : "Skip for now"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const current = STEPS[step];
   const value = prefs[current.key].trim();
@@ -39,7 +69,7 @@ export function Onboarding({ onDone }: { onDone: (prefs: Preferences) => void })
     setError(null);
     try {
       await api("/api/vocab/preferences", { method: "PUT", body: prefs });
-      onDone(prefs);
+      setDeckBuilt(true);
     } catch (err) {
       setError((err as Error).message);
       setLoading(false);

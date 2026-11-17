@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Speak Ready", template: "%s · Speak Ready" },
+  title: { default: "SpeakEasy", template: "%s · SpeakEasy" },
   description: "Build your vocabulary and practice speaking answers out loud.",
 };
 
