@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ConfirmDialog, ErrorNote, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/client-api";
+import { TroubleButton } from "@/components/troubleshoot/trouble-panel";
 import { AudiencePanel, type Audience } from "./audience-panel";
 import { Recorder } from "./recorder";
 import { useRecorder } from "./use-recorder";
@@ -134,7 +135,11 @@ export function PracticeView() {
 
   return (
     <>
-      <PageHeader title="Practice" description="Answer questions out loud, play your answer back, and keep the good ones." />
+      <PageHeader
+        title="Practice"
+        description="Answer questions out loud, play your answer back, and keep the good ones."
+        action={<TroubleButton className="shrink-0" />}
+      />
 
       <AudiencePanel audience={audience} loading={loading} hasQuestions={questions.length > 0} onGenerate={generate} />
 
