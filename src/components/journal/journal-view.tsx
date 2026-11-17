@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, ConfirmDialog, ErrorNote, PageHeader, Spinner, TextArea } from "@/components/ui";
+import { Button, ConfirmDialog, ErrorNote, PageHeader, TextArea } from "@/components/ui";
 import { api } from "@/lib/client-api";
+import { useToast } from "@/components/toast";
 import { QuestionBank } from "./question-bank";
 
 export type Entry = {
@@ -13,9 +14,9 @@ export type Entry = {
   updatedAt: string;
 };
 
-export function JournalView() {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(true);
+export function JournalView({ initialEntries }: { initialEntries?: Entry[] }) {
+  const [entries, setEntries] = useState<Entry[]>(initialEntries ?? []);
+  const [loading, setLoading] = useState(!initialEntries);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [composerOpen, setComposerOpen] = useState(false);
@@ -23,6 +24,7 @@ export function JournalView() {
   const [bankOpen, setBankOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Entry | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,9 +40,10 @@ export function JournalView() {
   }, []);
 
   useEffect(() => {
+    if (initialEntries) return; // already rendered by the server
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load
     load();
-  }, [load]);
+  }, [load, initialEntries]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -62,6 +65,7 @@ export function JournalView() {
     try {
       await api(`/api/journal/${target.id}`, { method: "DELETE" });
       setEntries((prev) => prev.filter((e) => e.id !== target.id));
+      toast("Entry deleted");
     } catch (err) {
       setDeleteError((err as Error).message);
     }
@@ -107,6 +111,7 @@ export function JournalView() {
               const { entry } = await api<{ entry: Entry }>("/api/journal", { method: "POST", body: values });
               setEntries((prev) => [entry, ...prev]);
               setComposerOpen(false);
+              toast("Entry saved");
             }}
           />
         </div>
@@ -138,9 +143,19 @@ export function JournalView() {
         )}
 
         {loading ? (
-          <div className="flex items-center gap-3 py-8 text-muted">
-            <Spinner /> Loading your journal…
-          </div>
+          <ul aria-busy="true" className="space-y-3">
+            <li className="sr-only">Loading your journal…</li>
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="animate-pulse rounded-2xl border border-line bg-surface px-5 py-4 motion-reduce:animate-none">
+                <div className="flex justify-between gap-4">
+                  <div className="h-4 w-3/5 rounded bg-line/70" />
+                  <div className="h-3 w-16 rounded bg-line/50" />
+                </div>
+                <div className="mt-3 h-3 w-full rounded bg-line/50" />
+                <div className="mt-2 h-3 w-4/5 rounded bg-line/50" />
+              </li>
+            ))}
+          </ul>
         ) : loadError ? (
           <ErrorNote message={loadError} onRetry={load} />
         ) : entries.length === 0 ? (
@@ -163,7 +178,10 @@ export function JournalView() {
               <li key={entry.id}>
                 <EntryCard
                   entry={entry}
-                  onUpdated={(updated) => setEntries((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))}
+                  onUpdated={(updated) => {
+                    setEntries((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+                    toast("Changes saved");
+                  }}
                   onDelete={() => setToDelete(entry)}
                 />
               </li>

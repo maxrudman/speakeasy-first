@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useCoach } from "@/components/coach/coach-context";
+import { useToast } from "@/components/toast";
 import { Button, ErrorNote, Notice, Spinner } from "@/components/ui";
 import { api } from "@/lib/client-api";
 import { MAX_RECORDING_SECONDS } from "@/lib/audio-limits";
@@ -58,6 +59,7 @@ export function Recorder({
   const [saveError, setSaveError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { ask } = useCoach();
+  const { toast } = useToast();
   const recording = state === "recording";
   const transcribing = status === "transcribing";
   const shownTranscript = recording ? `${transcript}${interimText ? ` ${interimText}` : ""}`.trim() : transcript;
@@ -111,6 +113,7 @@ export function Recorder({
     try {
       await api("/api/journal", { method: "POST", body: { prompt: question, response: transcript } });
       setSavedFor(transcript);
+      toast("Saved to your journal");
     } catch (err) {
       setSaveError((err as Error).message);
     } finally {

@@ -1,9 +1,11 @@
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -148,6 +150,22 @@ export const pushSubscriptions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("push_subscriptions_endpoint").on(t.endpoint), index("push_subscriptions_user").on(t.userId)],
+);
+
+/** One row per user per day they practiced (in their own time zone). Powers streaks and progress charts. */
+export const practiceDays = pgTable(
+  "practice_days",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    reviews: integer("reviews").notNull().default(0),
+    correct: integer("correct").notNull().default(0),
+    mastered: integer("mastered").notNull().default(0),
+    answers: integer("answers").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
 );
 
 export type User = typeof users.$inferSelect;

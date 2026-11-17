@@ -65,29 +65,31 @@ export function InstallGuide() {
           </button>
         ))}
       </div>
-      <ol role="tabpanel" className="list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed">
-        {tab === "iphone" && (
-          <>
-            <li>Open Speak Ready in <strong>Safari</strong> (other apps&apos; built-in browsers can&apos;t install it).</li>
-            <li>Tap the <strong>Share</strong> button (the square with an arrow).</li>
-            <li>Scroll down and tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
-            <li>Open Speak Ready from your Home Screen. On iOS 16.4 or later you can then turn on notifications on this page.</li>
-          </>
-        )}
-        {tab === "android" && (
-          <>
-            <li>Open Speak Ready in <strong>Chrome</strong>.</li>
-            <li>Tap the <strong>⋮</strong> menu, then <strong>Install app</strong> (or <strong>Add to Home screen</strong>).</li>
-            <li>Confirm with <strong>Install</strong>. Speak Ready opens like a regular app, and notifications work.</li>
-          </>
-        )}
-        {tab === "desktop" && (
-          <>
-            <li>In Chrome or Edge, click the <strong>install</strong> icon at the right end of the address bar (or the menu → Install Speak Ready).</li>
-            <li>In Safari on a Mac (Sonoma or later), choose <strong>File → Add to Dock</strong>.</li>
-          </>
-        )}
-      </ol>
+      <div role="tabpanel">
+        <ol className="list-decimal space-y-1.5 pl-5 text-[15px] leading-relaxed">
+          {tab === "iphone" && (
+            <>
+              <li>Open Speak Ready in <strong>Safari</strong> (other apps&apos; built-in browsers can&apos;t install it).</li>
+              <li>Tap the <strong>Share</strong> button (the square with an arrow).</li>
+              <li>Scroll down and tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+              <li>Open Speak Ready from your Home Screen. On iOS 16.4 or later you can then turn on notifications on this page.</li>
+            </>
+          )}
+          {tab === "android" && (
+            <>
+              <li>Open Speak Ready in <strong>Chrome</strong>.</li>
+              <li>Tap the <strong>⋮</strong> menu, then <strong>Install app</strong> (or <strong>Add to Home screen</strong>).</li>
+              <li>Confirm with <strong>Install</strong>. Speak Ready opens like a regular app, and notifications work.</li>
+            </>
+          )}
+          {tab === "desktop" && (
+            <>
+              <li>In Chrome or Edge, click the <strong>install</strong> icon at the right end of the address bar (or the menu → Install Speak Ready).</li>
+              <li>In Safari on a Mac (Sonoma or later), choose <strong>File → Add to Dock</strong>.</li>
+            </>
+          )}
+        </ol>
+      </div>
     </div>
   );
 }

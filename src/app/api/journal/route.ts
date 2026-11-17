@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { parseBody, withUser } from "@/lib/api";
+import { recordActivity } from "@/lib/progress";
 import { journalEntrySchema } from "@/lib/validation";
 
 const journalColumns = {
@@ -29,5 +30,6 @@ export const POST = withUser(async (req, user) => {
     .insert(schema.journalEntries)
     .values({ userId: user.id, prompt: data.prompt, response: data.response })
     .returning(journalColumns);
+  await recordActivity(user.id, req, { answers: 1 });
   return NextResponse.json({ entry }, { status: 201 });
 });

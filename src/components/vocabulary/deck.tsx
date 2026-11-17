@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, ErrorNote, Spinner } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
 import { api } from "@/lib/client-api";
 import { applyReview, MASTERY_BOX, pickNextTerm, TARGET_ACTIVE } from "@/lib/vocab-rules";
 import { useCoach } from "@/components/coach/coach-context";
-import { TroubleButton } from "@/components/troubleshoot/trouble-panel";
+import { TroubleButton } from "@/components/troubleshoot/trouble-button";
 import { PreferencesPopover } from "./preferences-popover";
 import type { Preferences } from "./preferences-form";
 
@@ -27,14 +27,20 @@ type Source = "ai" | "cache" | "builtin" | "mock" | null;
 export function Deck({
   preferences,
   onPreferencesChange,
+  initialTerms = [],
 }: {
   preferences: Preferences;
   onPreferencesChange: (p: Preferences) => void;
+  /** Rendered by the server so the first card shows immediately. */
+  initialTerms?: Term[];
 }) {
-  const [terms, setTerms] = useState<Term[]>([]);
-  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [terms, setTerms] = useState<Term[]>(initialTerms);
+  // The first card is the first active term (deterministic, so server and browser render the same thing).
+  const [currentId, setCurrentId] = useState<string | null>(
+    () => initialTerms.find((t) => t.status === "active")?.id ?? initialTerms[0]?.id ?? null,
+  );
   const [revealed, setRevealed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialTerms.length === 0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
@@ -88,9 +94,14 @@ export function Deck({
   }, [topUp]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load
-    load();
-  }, [load]);
+    // Already have cards from the server: only top up the deck if it's short.
+    // Otherwise load everything now.
+    const short = initialTerms.filter((t) => t.status === "active").length < TARGET_ACTIVE;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load on mount
+    if (!initialTerms.length) load();
+    else if (short) void topUp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+  }, []);
 
   function advance(updated: Term[], lastId: string) {
     setCurrentId(pickNextTerm(updated, lastId)?.id ?? null);
@@ -200,7 +211,7 @@ export function Deck({
         <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-2 text-sm">
           <Stat label="Learning" value={activeCount} />
           <Stat label="Mastered" value={masteredCount} />
-          <Stat label="Streak" value={streak} />
+          <Stat label="Right in a row" value={streak} />
           {(source === "builtin" || source === "cache") && (
             <p className="w-full text-xs text-muted">
               {source === "cache"
@@ -331,11 +342,26 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
+/** Same shape as the flashcard, so nothing jumps when it loads. */
 function CardSkeleton() {
   return (
-    <div className="flex min-h-80 flex-col items-center justify-center gap-3 rounded-3xl border border-line bg-surface text-muted">
-      <Spinner />
-      <span className="text-sm">Getting your terms ready…</span>
+    <div aria-busy="true" className="overflow-hidden rounded-3xl border border-line bg-surface">
+      <span className="sr-only">Getting your terms ready…</span>
+      <div className="animate-pulse motion-reduce:animate-none">
+        <div className="flex justify-between px-6 pt-5 sm:px-8">
+          <div className="h-3 w-12 rounded bg-line/70" />
+          <div className="h-3 w-28 rounded bg-line/70" />
+        </div>
+        <div className="px-6 pb-8 pt-12 sm:px-8 sm:pt-16">
+          <div className="h-12 w-2/3 rounded-lg bg-line/70" />
+          <div className="mt-6 h-4 w-32 rounded bg-line/50" />
+        </div>
+        <div className="flex items-center justify-between border-t border-line bg-paper/50 px-6 py-4 sm:px-8">
+          <div className="size-14 rounded-full bg-line/60" />
+          <div className="h-3 w-40 rounded bg-line/50" />
+          <div className="size-14 rounded-full bg-line/60" />
+        </div>
+      </div>
     </div>
   );
 }

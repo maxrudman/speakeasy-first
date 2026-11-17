@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { AuthForm } from "@/components/auth-form";
 import { Notice } from "@/components/ui";
 
-export const metadata: Metadata = { title: "Log in" };
+export const metadata: Metadata = {
+  title: "Log in",
+  description: "Log in to Speak Ready to continue your vocabulary flashcards, speaking practice and answer journal.",
+  alternates: { canonical: "/login" },
+};
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ expired?: string }> }) {
   const { expired } = await searchParams;

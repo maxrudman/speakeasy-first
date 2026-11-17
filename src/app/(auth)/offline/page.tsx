@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Offline" };
+export const metadata: Metadata = { title: "Offline", robots: { index: false } };
 
 /** Shown by the service worker when a page can't load without a connection. */
 export default function OfflinePage() {

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { jsonError, parseBody, withUser } from "@/lib/api";
 import { reviewSchema } from "@/lib/validation";
+import { recordActivity } from "@/lib/progress";
 import { termColumns } from "@/lib/vocab";
 import { applyReview } from "@/lib/vocab-rules";
 
@@ -42,6 +43,11 @@ export const POST = withUser<Ctx>(async (req, user, { params }) => {
     .where(eq(schema.vocabTerms.id, term.id))
     .returning(termColumns);
 
+  await recordActivity(user.id, req, {
+    reviews: 1,
+    correct: data.correct ? 1 : 0,
+    mastered: term.status === "active" && next.status === "retired" ? 1 : 0,
+  });
   return NextResponse.json({ term: updated });
 });
 
