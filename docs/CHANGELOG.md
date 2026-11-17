@@ -103,3 +103,38 @@ A floating **Coach** button sits on every logged-in page (bottom right, above th
 - **Offline coach:** with every provider down, a critique still measures length, pace, filler words, sentence length, specifics and STAR structure, and other requests get practical next steps.
 
 **Tested** against a local fake streaming Anthropic server. The primary model failed with 500 and was retried, then the fallback model streamed a reply that mentioned the user's field. Explain-the-card, Save to journal, history after reload and Clear all worked at desktop and phone sizes. With all models down, the built-in critique was correct (5 fillers, 124 wpm).
+
+## Stage 5: reminders, calendar, installable app and push
+
+Everything here is **optional and off by default**. With no keys set, each feature hides itself or explains that it isn't set up, without errors.
+
+**Email reminders**
+- Account → **Reminders**: how often (off, daily, or weekly on a chosen day), plus an optional email address with explicit consent ("Email me practice reminders. I can unsubscribe anytime."). Login stays username-only. Without consent, no address is stored. The user's time zone is saved automatically.
+- Sent through **Resend** (`RESEND_API_KEY`) or **SendGrid** (`SENDGRID_API_KEY`) from `EMAIL_FROM`, with `List-Unsubscribe` and one-click (RFC 8058) headers.
+- **Vercel Cron** (`vercel.json`) calls `/api/cron/reminders` daily at 15:00 UTC with `Authorization: Bearer $CRON_SECRET`. No secret means no run. Daily is used because Vercel's Hobby plan only allows daily cron jobs. Users are never reminded twice within 20 hours. A failed send is retried at the next run.
+- **Unsubscribe:** a signed link opens a confirm page (so link scanners can't unsubscribe people), and mail apps can use one-click POST. Unsubscribing turns reminders off and deletes the address. Forged tokens are rejected.
+- Reminder content: how many terms are waiting plus a question from the bank. Journal text is never included.
+
+**Add to calendar**
+- On Account ("Schedule practice", "Add an interview date") and Practice. Choose a practice session or interview, title, date, time, length and repeat (daily for 30 days or weekly for 12 weeks). You get a downloadable **.ics** (with a 15-minute alert and the repeat rule), a **Google Calendar** link (with the repeat rule) and an **Outlook.com** link. Works with no server keys.
+
+**Installable app (PWA)**
+- `manifest.webmanifest` with name, colours, shortcuts and 192/512/maskable icons, an Apple touch icon, `viewport-fit=cover`, and Apple web-app meta tags.
+- A service worker (`public/sw.js`) that always loads pages from the network (so deploys show up immediately) and shows `/offline` when there's no connection. It caches only hashed build files and icons, never API responses or user data.
+- Account → **Install the app** shows a one-tap Install button where the browser offers it (Android and desktop Chrome or Edge), plus step-by-step guides for iPhone (Safari → Share → Add to Home Screen), Android and desktop.
+
+**Web Push**
+- Account → **Notifications on this device**: turn on or off, and send a test. Push uses VAPID keys (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`); subscriptions are stored in `push_subscriptions` and removed when a browser reports them gone.
+- On iPhone, Web Push only works in the installed app (iOS 16.4+). The page detects this and points to the install guide, with email as the fallback. Blocked and unsupported cases are explained.
+- Reminders go to devices first and fall back to email when no device can be reached.
+
+**Schema:** migration `0004_reminders_push` adds `email`, `email_consent_at`, `reminder_frequency`, `reminder_weekday`, `timezone` and `last_reminder_at` to `users`, plus the new `push_subscriptions` table.
+
+**New env vars** (optional): `APP_URL`, `EMAIL_FROM`, `RESEND_API_KEY` or `SENDGRID_API_KEY`, `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`.
+
+**Tested:**
+- With no keys: reminders show "not set up", the cron job skips, and the manifest, service worker, icons, `/offline` and `/unsubscribe` load without a login.
+- With keys: settings validate and save, the cron job rejects a wrong secret and finds the due user, and a failed Resend call (blocked in the sandbox) is logged without the address and not marked as sent.
+- Unsubscribe: the confirm page works, one-click unsubscribe clears the email and consent, and a forged token is rejected.
+- In the browser: the .ics download is a valid weekly event and the Google link carries the repeat rule.
+- Not tested: a real push delivery. Headless browsers can't receive notifications.

@@ -29,6 +29,13 @@
       "when": 1794932472101,
       "tag": "0003_coach_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794932827252,
+      "tag": "0004_reminders_push",
+      "breakpoints": true
     }
   ]
 }

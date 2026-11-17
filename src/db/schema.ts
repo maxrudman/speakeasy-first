@@ -26,6 +26,14 @@ export const users = pgTable("users", {
   vocabLevel: text("vocab_level"),
   vocabField: text("vocab_field"),
   vocabAudience: text("vocab_audience"),
+  // Optional reminders. Login stays username-only; email is only for reminders, with consent.
+  email: text("email"),
+  emailConsentAt: timestamp("email_consent_at", { withTimezone: true }),
+  reminderFrequency: text("reminder_frequency", { enum: ["off", "daily", "weekly"] }).notNull().default("off"),
+  // 0 = Sunday … 6 = Saturday, in the user's time zone. Used when frequency is weekly.
+  reminderWeekday: integer("reminder_weekday").notNull().default(1),
+  timezone: text("timezone"),
+  lastReminderAt: timestamp("last_reminder_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -124,6 +132,22 @@ export const coachMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("coach_messages_user_created").on(t.userId, t.createdAt)],
+);
+
+/** Web Push subscriptions, one per browser/device the user turned notifications on for. */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("push_subscriptions_endpoint").on(t.endpoint), index("push_subscriptions_user").on(t.userId)],
 );
 
 export type User = typeof users.$inferSelect;

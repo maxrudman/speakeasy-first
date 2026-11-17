@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ConfirmDialog, ErrorNote, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/client-api";
+import { AddToCalendar } from "@/components/calendar/add-to-calendar";
 import { useCoach } from "@/components/coach/coach-context";
 import { TroubleButton } from "@/components/troubleshoot/trouble-panel";
 import { AudiencePanel, type Audience } from "./audience-panel";
@@ -158,6 +159,13 @@ export function PracticeView() {
       />
 
       <AudiencePanel audience={audience} loading={loading} hasQuestions={questions.length > 0} onGenerate={generate} />
+      <div className="mt-3 flex justify-end">
+        <AddToCalendar
+          defaultKind={audience?.purpose?.toLowerCase().includes("interview") ? "interview" : "practice"}
+          label="Add to calendar"
+          detail={audience ? [audience.purpose, audience.role].filter(Boolean).join(", ") : undefined}
+        />
+      </div>
 
       {error && (
         <div className="mt-4">
