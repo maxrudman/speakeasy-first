@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
+import { describeAiTiers } from "@/lib/ai-cascade";
 import { log } from "@/lib/log";
-import { fetchWithTimeout, isMockAi, PROVIDERS, providerKey, type ProviderId } from "@/lib/providers";
+import { fetchWithTimeout, isMockAi, openAiBaseUrl, PROVIDERS, providerKey, type ProviderId } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 20;
@@ -18,6 +19,8 @@ type HealthBody = {
   checkedAt: string;
   database: Check;
   providers: Record<ProviderId, Check & { label: string; purpose: string }>;
+  /** AI cascade order, e.g. ["anthropic:claude-sonnet-5-5", "anthropic:claude-haiku-5-5", "cache", "builtin"]. */
+  aiTiers: string[];
 };
 
 async function timed(fn: () => Promise<boolean | string>): Promise<Check> {
@@ -46,7 +49,7 @@ function probe(id: ProviderId, key: string): Promise<Check> {
       );
     case "openai":
       return timed(async () =>
-        ok(await fetchWithTimeout("https://api.openai.com/v1/models", { headers: { Authorization: `Bearer ${key}` } })),
+        ok(await fetchWithTimeout(`${openAiBaseUrl()}/models`, { headers: { Authorization: `Bearer ${key}` } })),
       );
     case "deepgram":
       return timed(async () =>
@@ -88,7 +91,7 @@ async function runChecks(): Promise<HealthBody> {
       ...Object.fromEntries(ids.map((id, i) => [id, checks[i].status])),
     });
   }
-  return { status, checkedAt: new Date().toISOString(), database, providers };
+  return { status, checkedAt: new Date().toISOString(), database, providers, aiTiers: describeAiTiers() };
 }
 
 /**

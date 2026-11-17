@@ -1,6 +1,6 @@
 import "server-only";
 import { log } from "./log";
-import { providerKey } from "./providers";
+import { openAiBaseUrl, providerKey } from "./providers";
 import { breakerFor, isRetryableStatus, ProviderError, retry, sleep, withTimeout } from "./resilience";
 
 /**
@@ -53,7 +53,7 @@ const whisper: Transcriber = {
     form.append("timestamp_granularities[]", "word");
     form.append("timestamp_granularities[]", "segment");
     if (language) form.append("language", language);
-    const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    const res = await fetch(`${openAiBaseUrl()}/audio/transcriptions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${providerKey("openai")}` },
       body: form,

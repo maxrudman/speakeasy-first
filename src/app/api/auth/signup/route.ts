@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { jsonError, parseBody } from "@/lib/api";
 import { isUniqueViolation, log } from "@/lib/log";
+import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/session";
 import { credentialsSchema } from "@/lib/validation";
 
@@ -11,6 +12,8 @@ export async function POST(req: Request) {
   try {
     const { data, error } = await parseBody(req, credentialsSchema);
     if (error) return error;
+    const limited = await enforceRateLimit("login", `signup:${clientIp(req)}`);
+    if (limited) return limited;
 
     const existing = await db
       .select({ id: schema.users.id })

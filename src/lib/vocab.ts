@@ -60,6 +60,7 @@ export async function addTerms(
     .where(eq(schema.vocabTerms.userId, user.id));
 
   const { terms, source } = await generateTerms({
+    userId: user.id,
     level: user.vocabLevel,
     field: user.vocabField,
     audience: user.vocabAudience,

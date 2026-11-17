@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { jsonError, parseBody } from "@/lib/api";
 import { log } from "@/lib/log";
+import { clientIp, enforceRateLimit } from "@/lib/rate-limit";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/session";
 
 const loginSchema = z.object({
@@ -16,6 +17,9 @@ export async function POST(req: Request) {
   try {
     const { data, error } = await parseBody(req, loginSchema);
     if (error) return error;
+    // Slows down password guessing: 10 tries per username + network every 10 minutes.
+    const limited = await enforceRateLimit("login", `${data.username}:${clientIp(req)}`);
+    if (limited) return limited;
 
     const [user] = await db
       .select({ id: schema.users.id, passwordHash: schema.users.passwordHash })

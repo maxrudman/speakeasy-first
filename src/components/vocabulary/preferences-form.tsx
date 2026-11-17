@@ -6,7 +6,7 @@ import { api } from "@/lib/client-api";
 import { VOCAB_LEVELS } from "@/lib/validation";
 
 export type Preferences = { level: string; field: string; audience: string };
-export type SaveResult = { added: number; source: "ai" | "builtin" | null };
+export type SaveResult = { added: number; source: "ai" | "cache" | "builtin" | "mock" | null };
 
 /** Level / field / audience form, used in the corner popover and on the Account page. */
 export function PreferencesForm({

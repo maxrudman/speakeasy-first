@@ -20,7 +20,7 @@ export type Term = {
   timesWrong: number;
 };
 
-type Source = "ai" | "builtin" | null;
+type Source = "ai" | "cache" | "builtin" | "mock" | null;
 
 export function Deck({
   preferences,
@@ -190,9 +190,11 @@ export function Deck({
           <Stat label="Learning" value={activeCount} />
           <Stat label="Mastered" value={masteredCount} />
           <Stat label="Streak" value={streak} />
-          {source === "builtin" && (
+          {(source === "builtin" || source === "cache") && (
             <p className="w-full text-xs text-muted">
-              Using the built-in word list. Add an Anthropic API key to get terms tailored to your field.
+              {source === "cache"
+                ? "Our word generator is busy, so these new terms come from your earlier sets."
+                : "Our word generator is unavailable right now, so new terms come from the built-in list."}
             </p>
           )}
         </dl>

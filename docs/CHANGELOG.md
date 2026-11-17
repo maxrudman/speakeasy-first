@@ -52,3 +52,25 @@ Each server tier gets a timeout and one retry with backoff, and a circuit breake
 **New env vars** (all optional): `OPENAI_API_KEY`, `OPENAI_TRANSCRIBE_MODEL`, `DEEPGRAM_API_KEY`, `DEEPGRAM_MODEL`, `ASSEMBLYAI_API_KEY`, `SPEAKEASY_MOCK_TRANSCRIPTION` (tests only).
 
 **Tested** in Chromium with a fake microphone: a tone goes through the server tier (mock) and shows a low-confidence chip; a silent file shows the no-speech message; a soft tone shows the "too quiet" tip; with no keys you get the manual message. The 30th upload in a window returns 429. Uploads over 4 MB and non-audio files are rejected with plain messages.
+
+## Stage 2: AI backups (cascade)
+
+**One helper for every AI call:** `runJson()` in `src/lib/ai-cascade.ts`. Vocabulary terms and practice questions use it now; the Stage 4 coach will too. Order:
+1. `SPEAKEASY_MOCK_AI=1`: no network calls, built-in content (labelled `mock`).
+2. `ANTHROPIC_MODEL` (default `claude-sonnet-5-5`).
+3. Each model in `ANTHROPIC_MODEL_FALLBACKS` (for example `claude-haiku-5-5`).
+4. OpenAI (`OPENAI_MODEL`, default `gpt-4o-mini`) when `OPENAI_API_KEY` exists.
+5. Earlier results for the same profile from the new `ai_cache` table (migration `0002_ai_cache`).
+6. Built-in content: 89 terms, question templates and the journal bank.
+
+**Per model tier:** 25 s timeout inside a 45 s overall budget; exponential backoff with jitter on 429, 5xx and timeouts (two retries); a circuit breaker that skips the tier for 60 s after three failures in a row; and structured outputs with zod validation, one re-ask quoting the exact problem, then fall-through. Refusals and cut-off replies fall through to the next model. Models that reject `output_config` (older ones) automatically switch to plain mode. Low effort keeps these short generations fast.
+
+**Caching and limits:** each successful result is cached per user and profile (level/field/audience, or purpose/role/specifications), keeping the newest 5 and clearing entries older than 30 days. Each user gets 40 AI generations per 10 minutes; beyond that they get cached or built-in content instead of an error. Login is limited to 10 attempts per username and network per 10 minutes, and sign-up to 10 per network.
+
+**Logging:** `ai.answered` records the task, source, tier, attempt count and time, plus `ai.retry`, `ai.reask`, `ai.tier_failed` and `ai.skipped_open_circuit`. Prompts and replies are never logged. `/api/health` now lists the cascade order as `aiTiers`.
+
+**UI:** Vocabulary and Practice say plainly when content came from earlier sets or the built-in list.
+
+**New env vars** (optional): `ANTHROPIC_MODEL_FALLBACKS`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `SPEAKEASY_MOCK_AI`.
+
+**Tested** against a local fake Anthropic server. A 429 model was retried twice then skipped, a 500 model the same, and a bad-JSON model was re-asked and answered. With every model down, the same audience was served from cache and a new audience from the built-in list. Mock mode made no calls. The 11th bad login returned 429. The full click-test passes at desktop and phone sizes.
