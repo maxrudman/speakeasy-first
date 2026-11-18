@@ -13,6 +13,7 @@ export const POST = withUser(async (req) => {
     purpose: data.purpose,
     role: data.role,
     specifications: data.specifications,
+    difficulty: data.difficulty,
     exclude: data.exclude,
   });
   return NextResponse.json(result);

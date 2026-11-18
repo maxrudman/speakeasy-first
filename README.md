@@ -3,7 +3,7 @@
 A web app for building vocabulary and practicing spoken answers.
 
 - **Vocabulary**: flashcards tailored to your level, field, and audience, with spaced repetition. Terms you keep getting right are retired and replaced with new ones.
-- **Practice**: describe your audience, get tailored interview questions, record your answer, play it back, and copy the transcript.
+- **Practice**: describe your audience and pick a difficulty (Easy, Medium, Hard), get questions written for that exact setting, record your answer, play it back, copy the transcript, and get a graded analysis of your answer and delivery.
 - **Journal**: save your best answers. Includes a bank of about 100 common questions.
 - **Account**: username and password login. Every user's data is private to them.
 
@@ -28,7 +28,7 @@ Open `.env.local` and fill in:
 |---|---|
 | `DATABASE_URL` | Your own free database at [neon.tech](https://neon.tech). Create a project, then copy the pooled connection string. Each teammate should use their **own** database (or their own Neon branch) so you don't overwrite each other's test data. |
 | `SESSION_SECRET` | Run `openssl rand -base64 32` and paste the result. Any random string of 32+ characters works. |
-| `ANTHROPIC_API_KEY` | Optional. From [console.anthropic.com](https://console.anthropic.com). Without it, the app uses its built-in word and question lists. |
+| `ANTHROPIC_API_KEY` | Strongly recommended. From [console.anthropic.com](https://console.anthropic.com). Powers tailored vocabulary, setting-specific practice questions, and full speech feedback. Without it, the app uses built-in lists and a basic rules-based grader. |
 
 Then:
 
@@ -106,5 +106,7 @@ drizzle/                        Database migrations (commit these)
 **Spaced repetition.** Each term sits in a box from 0 to 5. A check moves it up one box, and an X sends it back to 0. Lower boxes show up far more often. At box 5 the term is "mastered": it's retired, replaced with a new term, and comes back for review about 1 in 15 cards. All the numbers live in `src/lib/vocab-rules.ts`.
 
 **Recording and transcripts.** Audio is recorded in the browser and never leaves the device. Live transcription uses the browser's built-in speech recognition, which works best in Chrome and Edge. In other browsers, users can type or paste into the transcript box.
+
+**Speech analysis.** While you record, the browser measures pace, pauses, pitch variation and volume (`src/components/practice/voice-meter.ts`). Only those numbers and the transcript are sent for grading; the audio never leaves the device. Claude grades six categories (clarity and relevance, substance, structure, word choice, professionalism, vocal delivery) against the expectations of the setting, and the difficulty sets how strict it is. The rubric and the built-in backup grader live in `src/lib/speech-analysis.ts`.
 
 **AI fallbacks.** Every Claude call in `src/lib/ai.ts` falls back to the built-in lists if there's no API key or the request fails, so the app never breaks because of the API.

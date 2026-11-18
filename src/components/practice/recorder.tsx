@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button, ErrorNote, Notice } from "@/components/ui";
 import { api } from "@/lib/client-api";
+import { AnalysisPanel } from "./analysis-panel";
+import type { Audience } from "./audience-panel";
 import type { useRecorder } from "./use-recorder";
 
 function formatTime(total: number) {
@@ -14,13 +16,16 @@ function formatTime(total: number) {
 export function Recorder({
   recorder,
   question,
+  audience,
   onRecord,
 }: {
   recorder: ReturnType<typeof useRecorder>;
   question: string | null;
+  audience: Audience | null;
   onRecord: () => void;
 }) {
-  const { state, audioUrl, seconds, transcript, setTranscript, interimText, error, transcriptionSupported, stop } = recorder;
+  const { state, audioUrl, seconds, transcript, setTranscript, interimText, error, transcriptionSupported, stop, delivery, durationSec } =
+    recorder;
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedFor, setSavedFor] = useState<string | null>(null);
@@ -148,6 +153,15 @@ export function Recorder({
               <ErrorNote message={saveError} onRetry={saveToJournal} />
             </div>
           )}
+          <AnalysisPanel
+            takeId={audioUrl}
+            transcript={transcript}
+            question={question}
+            audience={audience}
+            durationSec={durationSec}
+            delivery={delivery}
+            disabled={recording}
+          />
         </div>
       )}
     </section>
