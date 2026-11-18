@@ -4,7 +4,9 @@ A web app for building vocabulary and practicing spoken answers.
 
 - **Vocabulary**: flashcards tailored to your level, field, and audience, with spaced repetition. Terms you keep getting right are retired and replaced with new ones.
 - **Practice**: describe your audience and pick a difficulty (Easy, Medium, Hard), get questions written for that exact setting, record your answer, play it back, copy the transcript, and get a graded analysis of your answer and delivery.
-- **Pitch Room**: an elevator pitch game. Pick a one-on-one interview, a panel, an actual elevator or a conference stage, beat the clock, and watch a cartoon audience react live to your pitch. You get a score out of 100, a grade and quick tips, plus a best score and daily streak.
+- **Pitch Room**: an elevator pitch game. Pick a one-on-one interview, a panel, an actual elevator or a conference stage, beat the clock, and watch a cartoon audience react live to your pitch. You get a score out of 100, a grade and quick tips, plus a best score and daily streak. The interviewer reads the question out loud, the live transcript highlights filler words and strong moments, there's a follow-up bonus round, an AI rewrite of your pitch (built-in rewrite with no AI key) and a teleprompter to rehearse it. Sound effects can be muted.
+- **Home**: your level and XP, daily streak, today's challenge and a shelf of 10 badges to unlock (saved per user in the browser).
+- **Landing page**: logged-out visitors see an animated homepage with a self-playing Pitch Room demo.
 - **Journal**: save your best answers. Includes a bank of about 100 common questions.
 - **Account**: username and password login. Every user's data is private to them.
 
@@ -102,7 +104,9 @@ src/
   lib/
     ai.ts                       All AI calls (Claude or Groq), with fallbacks
     vocab-rules.ts              Spaced repetition rules (tweak the numbers here)
-    pitch.ts                    Pitch Room scoring: parts, filler words, pace, live mood
+    pitch.ts                    Pitch Room scoring: parts, filler words, pace, live mood, highlights, follow-ups
+    game.ts                     XP, levels, badges and daily challenges (tweak the numbers here)
+    sfx.ts                      Synthesized sound effects (no audio files)
     auth.ts, session.ts         Login sessions
   proxy.ts                      Redirects logged-out visitors to /login
 drizzle/                        Database migrations (commit these)

@@ -1,29 +1,44 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useGame } from "@/components/game/game-provider";
+import { SoundToggle } from "@/components/sound-toggle";
 import { Button, ErrorNote, Notice, PageHeader, Spinner, TextField } from "@/components/ui";
 import { useRecorder } from "@/components/practice/use-recorder";
 import { api } from "@/lib/client-api";
+import { levelFor } from "@/lib/game";
 import {
   analyzePitch,
   diffPitch,
+  followUpFor,
   IDEAL_WPM,
   liveMood,
   MOOD_TEXT,
   moodLevel,
   PITCH_PARTS,
+  scoreFollowUp,
   scorePitch,
   type PitchAnalysis,
   type PitchEvent,
   type PitchPart,
   type PitchScore,
 } from "@/lib/pitch";
+import { playApplause, playDing, playGroan, playPop, unlockAudio } from "@/lib/sfx";
 import { Stage, type Reaction } from "./audience";
+import { HighlightedTranscript, HighlightLegend } from "./highlighted-transcript";
 import { SCENES, sceneById, TIME_OPTIONS, type Scene, type SceneId, type TimeOption } from "./scenes";
+import { speakLine } from "./speak";
+import { Teleprompter } from "./teleprompter";
 import { usePitchStats } from "./use-pitch-stats";
 
-type Phase = "setup" | "live" | "scoring" | "results";
-type Result = { score: PitchScore; text: string; seconds: number; isBest: boolean };
+type Phase = "setup" | "intro" | "live" | "scoring" | "results" | "teleprompter";
+/** A pitch, or a 30-second answer to the interviewer's follow-up question. */
+type Round = { kind: "pitch" | "followUp"; prompt: string; limit: number };
+type Result = { round: Round; score: PitchScore; text: string; seconds: number; isBest: boolean; xp: number };
+type Rewrite = { rewrite: string; notes: string[]; source: "ai" | "builtin" };
+
+const FOLLOW_UP_SECONDS = 30;
+const GOOD_REACTIONS = new Set(["👋", "💼", "📈", "🤝", "🔥", "👏"]);
 
 const GOAL_KEY = "se-pitch-goal";
 const SCENE_KEY = "se-pitch-scene";
@@ -74,12 +89,16 @@ function formatClock(total: number) {
 export function PitchView() {
   const recorder = useRecorder();
   const { best, streak, record } = usePitchStats();
+  const game = useGame();
 
   const [phase, setPhase] = useState<Phase>("setup");
   const [sceneId, setSceneId] = useState<SceneId>("interview");
   const [limit, setLimit] = useState<TimeOption>(60);
   const [goal, setGoal] = useState("");
+  const [round, setRound] = useState<Round>({ kind: "pitch", prompt: "", limit: 60 });
   const [result, setResult] = useState<Result | null>(null);
+  /** The last scored pitch (kept while a follow-up round runs). */
+  const [pitchResult, setPitchResult] = useState<Result | null>(null);
   const [manualText, setManualText] = useState("");
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [quietSeconds, setQuietSeconds] = useState(0);
@@ -88,6 +107,9 @@ export function PitchView() {
   const [saveError, setSaveError] = useState<string | null>(null);
   /** No words were captured: ask the person to type their pitch to get a score. */
   const [needsTyping, setNeedsTyping] = useState(false);
+  const [rewrite, setRewrite] = useState<Rewrite | null>(null);
+  const [rewriting, setRewriting] = useState(false);
+  const [rewriteError, setRewriteError] = useState<string | null>(null);
 
   const scene = sceneById(sceneId);
   const cutOff = useRef(false);
@@ -101,6 +123,7 @@ export function PitchView() {
   const lastCheer = useRef(0);
   const reactionId = useRef(0);
   const seatCursor = useRef(0);
+  const cancelSpeech = useRef<(() => void) | null>(null);
 
   // Restore the last setting and goal.
   useEffect(() => {
@@ -118,6 +141,9 @@ export function PitchView() {
     }
   }, []);
 
+  // Stop the interviewer talking if the page is left mid-sentence.
+  useEffect(() => () => cancelSpeech.current?.(), []);
+
   function pickScene(s: Scene) {
     setSceneId(s.id);
     setLimit(s.defaultSeconds);
@@ -134,18 +160,38 @@ export function PitchView() {
       const seat = seatCursor.current++ * 5 + 2; // walk around the crowd
       setReactions((rs) => [...rs.slice(-5), { id, seat: seat % scene.seats.length, emoji }]);
       setTimeout(() => setReactions((rs) => rs.filter((r) => r.id !== id)), 1900);
+      playPop(GOOD_REACTIONS.has(emoji));
     },
     [scene.seats.length],
   );
 
   /* ------------------------------- Starting a round ------------------------------ */
 
-  function start() {
+  /** Starts recording now (the interviewer has finished speaking, or was skipped). */
+  function beginRecording() {
+    cancelSpeech.current?.();
+    cancelSpeech.current = null;
+    lastSoundAt.current = Date.now();
+    setPhase("live");
+    void recorder.start();
+  }
+
+  function start(kind: Round["kind"] = "pitch") {
+    unlockAudio();
+    const followUp = kind === "followUp" && pitchResult;
+    const next: Round = followUp
+      ? { kind, prompt: followUpFor(pitchResult.text, pitchResult.seconds), limit: FOLLOW_UP_SECONDS }
+      : { kind: "pitch", prompt: scene.prompt, limit };
+    if (!followUp) {
+      setPitchResult(null);
+      setRewrite(null);
+      setRewriteError(null);
+    }
+    setRound(next);
     cutOff.current = false;
     takeStarted.current = false;
     elapsedAtStop.current = 0;
     prevAnalysis.current = EMPTY_ANALYSIS;
-    lastSoundAt.current = Date.now();
     silentFlagged.current = false;
     lastCheer.current = 0;
     setQuietSeconds(0);
@@ -160,9 +206,10 @@ export function PitchView() {
     } catch {
       /* ignore */
     }
-    setPhase("live");
-    // Called inside the tap so the microphone and level meter are allowed to start (Safari).
-    void recorder.start();
+    // The interviewer asks the question out loud first; the mic opens when they finish.
+    setPhase("intro");
+    if (scene.id === "elevator") playDing();
+    cancelSpeech.current = speakLine(next.prompt, { pitch: scene.id === "elevator" ? 0.9 : 1.05, rate: 1 }, beginRecording);
   }
 
   function finish() {
@@ -170,6 +217,7 @@ export function PitchView() {
   }
 
   function backToSetup() {
+    cancelSpeech.current?.();
     recorder.reset();
     setReactions([]);
     setPhase("setup");
@@ -186,32 +234,49 @@ export function PitchView() {
   // Time's up.
   const { state: recState, seconds: recSeconds, stop: recStop } = recorder;
   useEffect(() => {
-    if (phase === "live" && recState === "recording" && recSeconds >= limit) {
+    if (phase === "live" && recState === "recording" && recSeconds >= round.limit) {
       cutOff.current = true;
       recStop();
     }
-  }, [phase, recState, recSeconds, recStop, limit]);
+  }, [phase, recState, recSeconds, recStop, round.limit]);
 
   // Recording ended: move on to scoring.
   useEffect(() => {
     if (phase === "live" && recorder.state === "recording") takeStarted.current = true;
     if (phase === "live" && recorder.state === "recorded" && takeStarted.current) {
       // durationSec is measured to a tenth of a second when recording stops.
-      elapsedAtStop.current = Math.min(limit, Math.max(recorder.seconds, Math.round(recorder.durationSec)));
+      elapsedAtStop.current = Math.min(round.limit, Math.max(recorder.seconds, Math.round(recorder.durationSec)));
+      if (scene.id === "elevator") playDing();
       // eslint-disable-next-line react-hooks/set-state-in-effect -- follow the recorder's state
       setPhase("scoring");
     }
-  }, [phase, recorder.state, recorder.seconds, recorder.durationSec, limit]);
+  }, [phase, recorder.state, recorder.seconds, recorder.durationSec, round.limit, scene.id]);
 
+  const { award } = game;
   const finalize = useCallback(
     (text: string) => {
       const seconds = Math.max(1, elapsedAtStop.current);
-      const score = scorePitch(text, seconds, limit, cutOff.current);
-      const isBest = text.trim() ? record(sceneId, score.total) : false;
-      setResult({ score, text, seconds, isBest });
+      const isPitch = round.kind === "pitch";
+      const score = isPitch ? scorePitch(text, seconds, round.limit, cutOff.current) : scoreFollowUp(text, seconds, round.limit, cutOff.current);
+      const a = analyzePitch(text, seconds);
+      let isBest = false;
+      let xp = 0;
+      if (text.trim()) {
+        if (isPitch) {
+          isBest = record(sceneId, score.total);
+          xp = award({ kind: "pitch", room: sceneId, score: score.total, words: a.words, fillers: a.fillers });
+        } else {
+          xp = award({ kind: "followUp", score: score.total });
+        }
+      }
+      const r: Result = { round, score, text, seconds, isBest, xp };
+      setResult(r);
+      if (isPitch) setPitchResult(r);
       setPhase("results");
+      if (score.total >= 60) playApplause(Math.min(1, (score.total - 40) / 60));
+      else if (score.total < 45 && text.trim()) playGroan();
     },
-    [limit, record, sceneId],
+    [round, record, sceneId, award],
   );
 
   // Keep the newest transcript handy: the browser can deliver its last words just after we stop.
@@ -295,7 +360,8 @@ export function PitchView() {
     setSaving(true);
     setSaveError(null);
     try {
-      const prompt = `Elevator pitch · ${scene.name}${goal.trim() ? ` · ${goal.trim()}` : ""} · ${result.score.total}/100`;
+      const label = result.round.kind === "pitch" ? "Elevator pitch" : `Follow-up: ${result.round.prompt}`;
+      const prompt = `${label} · ${scene.name}${goal.trim() ? ` · ${goal.trim()}` : ""} · ${result.score.total}/100`;
       await api("/api/journal", { method: "POST", body: { prompt: prompt.slice(0, 1000), response: result.text } });
       setSaved(true);
     } catch (err) {
@@ -305,18 +371,50 @@ export function PitchView() {
     }
   }
 
+  async function getRewrite() {
+    const source = pitchResult ?? result;
+    if (!source) return;
+    setRewriting(true);
+    setRewriteError(null);
+    try {
+      const r = await api<Rewrite>("/api/pitch/rewrite", {
+        method: "POST",
+        body: { pitch: source.text, scene: scene.name, prompt: scene.prompt, goal: goal.trim(), seconds: limit },
+      });
+      setRewrite(r);
+    } catch (err) {
+      setRewriteError((err as Error).message);
+    } finally {
+      setRewriting(false);
+    }
+  }
+
+  const onRehearsed = useCallback(() => {
+    award({ kind: "rehearsal" });
+    playApplause(0.6);
+  }, [award]);
+
   /* ------------------------------------- Views ----------------------------------- */
 
   if (phase === "setup") {
+    const lvl = levelFor(game.state.xp);
     return (
       <div>
         <PageHeader
           eyebrow="Game"
           title="Pitch Room"
           description="Practice the elevator pitch every interview asks for. Pick a room, beat the clock, and watch your audience react live."
+          action={<SoundToggle className="shrink-0" />}
         />
 
-        <StatsStrip streak={streak} best={best[sceneId]} sceneName={scene.name} />
+        <div className="flex flex-wrap gap-3">
+          {game.ready && (
+            <span className="card-pop inline-flex items-center gap-2 rounded-full bg-lilac-soft px-4 py-2 text-sm font-semibold">
+              <span aria-hidden="true">🚀</span> Level {lvl.level} · {lvl.name} · {lvl.xp} XP
+            </span>
+          )}
+          <StatsStrip streak={streak} best={best[sceneId]} sceneName={scene.name} />
+        </div>
 
         <section aria-labelledby="pick-room" className="mt-8">
           <StepTitle n={1} id="pick-room">
@@ -333,7 +431,7 @@ export function PitchView() {
                   aria-checked={on}
                   onClick={() => pickScene(s)}
                   className={`group relative overflow-hidden rounded-2xl border-2 border-edge text-left transition motion-reduce:transition-none ${
-                    on ? "shadow-[6px_6px_0_0_var(--edge)] -translate-x-0.5 -translate-y-0.5" : "shadow-[3px_3px_0_0_var(--edge)] hover:-translate-y-0.5"
+                    on ? "-translate-x-0.5 -translate-y-0.5 shadow-[6px_6px_0_0_var(--edge)]" : "shadow-[3px_3px_0_0_var(--edge)] hover:-translate-y-0.5"
                   }`}
                   style={{ backgroundColor: s.tile }}
                 >
@@ -410,44 +508,52 @@ export function PitchView() {
         <div className="mt-8 flex flex-col items-center gap-3 text-center">
           <button
             type="button"
-            onClick={start}
+            onClick={() => start("pitch")}
             className="btn-pop inline-flex h-16 items-center gap-3 rounded-2xl bg-pop-coral px-8 font-display text-xl font-extrabold text-[#221a4d]"
           >
             <MicGlyph className="size-7" />
             Step into the room
           </button>
           <p className="max-w-md text-sm text-muted">
-            Uses your microphone. Your audio stays on this device and is never uploaded.
+            The interviewer asks the question out loud, then your mic opens. Your audio stays on this device and is never uploaded.
           </p>
         </div>
       </div>
     );
   }
 
-  if (phase === "live") {
-    const starting = recorder.state !== "recording";
-    const elapsed = starting ? 0 : Math.min(recorder.seconds, limit);
-    const remaining = limit - elapsed;
-    const floor = 1 + Math.round((29 * elapsed) / limit);
+  if (phase === "intro" || phase === "live") {
+    const intro = phase === "intro";
+    const starting = !intro && recorder.state !== "recording";
+    const elapsed = intro || starting ? 0 : Math.min(recorder.seconds, round.limit);
+    const remaining = round.limit - elapsed;
+    const floor = 1 + Math.round((29 * elapsed) / round.limit);
     return (
       <div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="rounded-full border-2 border-edge px-3 py-1 text-sm font-bold text-[#221a4d]" style={{ backgroundColor: scene.tile }}>
-              {scene.name}
+              {round.kind === "followUp" ? `${scene.name} · Follow-up` : scene.name}
             </span>
             <span
               className={`rounded-xl border-2 border-edge px-3 py-1 font-display text-2xl font-extrabold tabular-nums ${
-                remaining <= 10 ? "bg-coral text-white dark:text-paper" : "bg-surface"
+                remaining <= 10 && !intro ? "bg-coral text-white dark:text-paper" : "bg-surface"
               }`}
               aria-label={`${remaining} seconds left`}
             >
               {formatClock(remaining)}
             </span>
           </div>
-          <Button variant="danger" onClick={finish} disabled={starting}>
-            I&apos;m done
-          </Button>
+          <div className="flex items-center gap-2">
+            <SoundToggle />
+            {intro ? (
+              <Button onClick={beginRecording}>Skip, I&apos;m ready</Button>
+            ) : (
+              <Button variant="danger" onClick={finish} disabled={starting}>
+                I&apos;m done
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="card-pop relative overflow-hidden rounded-3xl bg-surface">
@@ -456,18 +562,27 @@ export function PitchView() {
             mood={mood}
             reactions={reactions}
             floor={floor}
-            label={`${scene.name}. ${level ? MOOD_TEXT[level] : "Your audience is waiting."}`}
+            talking={intro ? scene.speaker : null}
+            label={`${scene.name}. ${intro ? `${scene.promptFrom} asks: ${round.prompt}` : level ? MOOD_TEXT[level] : "Your audience is waiting."}`}
           />
-          {(starting || recorder.seconds < 5) && (
-            <div className="absolute top-3 left-3 max-w-[70%] rounded-2xl rounded-bl-sm border-2 border-[#221a4d] bg-[#fffdf9] px-4 py-2.5 text-[#221a4d] shadow-[3px_3px_0_0_#221a4d] sm:top-5 sm:left-5">
-              <p className="font-display text-lg leading-snug font-bold sm:text-xl">&ldquo;{scene.prompt}&rdquo;</p>
+          {(intro || starting || recorder.seconds < 5) && (
+            <div className="celebrate-in absolute top-3 left-3 max-w-[75%] rounded-2xl rounded-bl-sm border-2 border-[#221a4d] bg-[#fffdf9] px-4 py-2.5 text-[#221a4d] shadow-[3px_3px_0_0_#221a4d] sm:top-5 sm:left-5">
+              <p className="font-display text-lg leading-snug font-bold sm:text-2xl">&ldquo;{round.prompt}&rdquo;</p>
               <p className="text-xs font-semibold text-[#5f5880]">{scene.promptFrom}</p>
             </div>
           )}
-          {starting && (
-            <div className="absolute inset-0 grid place-items-center bg-[#221a4d]/40">
+          {(intro || starting) && (
+            <div className="absolute inset-x-0 bottom-16 flex justify-center">
               <p className="flex items-center gap-2 rounded-full border-2 border-[#221a4d] bg-[#ffc83d] px-4 py-2 font-semibold text-[#221a4d]">
-                <Spinner className="size-4" /> Turning on your mic…
+                {intro ? (
+                  <>
+                    <span aria-hidden="true">🎙️</span> Listen… your mic opens when they finish
+                  </>
+                ) : (
+                  <>
+                    <Spinner className="size-4" /> Turning on your mic…
+                  </>
+                )}
               </p>
             </div>
           )}
@@ -479,27 +594,34 @@ export function PitchView() {
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_18rem]">
           <section aria-label="Live transcript" className="card-pop rounded-2xl bg-surface p-5">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-display text-lg font-bold">What they&apos;re hearing</h2>
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-coral">
-                <span className="recording-pulse size-2.5 rounded-full bg-coral" aria-hidden="true" /> Live
-              </span>
-            </div>
-            <p className="mt-3 min-h-24 text-[17px] leading-relaxed">
-              {live && recorder.transcript}
-              {live && recorder.interimText && <span className="text-muted"> {recorder.interimText}</span>}
-              {!liveText && (
-                <span className="text-muted">
-                  {recorder.transcriptionSupported
-                    ? "Start talking…"
-                    : "Live captions aren't available in this browser (they work best in Chrome and Edge). Keep going: when you finish, you can type your pitch to get your score."}
+              {live && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-coral">
+                  <span className="recording-pulse size-2.5 rounded-full bg-coral" aria-hidden="true" /> Live
                 </span>
               )}
-            </p>
+            </div>
+            <div className="mt-2">
+              <HighlightLegend />
+            </div>
+            <div className="mt-3 min-h-24 text-[17px]">
+              {live && (recorder.transcript || recorder.interimText) ? (
+                <HighlightedTranscript text={recorder.transcript} interim={recorder.interimText} />
+              ) : (
+                <p className="text-muted">
+                  {intro
+                    ? "Get ready…"
+                    : recorder.transcriptionSupported
+                      ? "Start talking…"
+                      : "Live captions aren't available in this browser (they work best in Chrome and Edge). Keep going: when you finish, you can type your pitch to get your score."}
+                </p>
+              )}
+            </div>
           </section>
 
           <aside className="space-y-4">
-            <PartsChecklist parts={analysis.parts} />
+            {round.kind === "pitch" && <PartsChecklist parts={analysis.parts} />}
             <div className="grid grid-cols-2 gap-3">
               <LiveStat label="Words / min" value={analysis.wpm || "–"} ok={!analysis.wpm || (analysis.wpm >= IDEAL_WPM.min - 15 && analysis.wpm <= IDEAL_WPM.max + 15)} />
               <LiveStat label="Filler words" value={analysis.fillers} ok={analysis.fillers <= 2} />
@@ -525,7 +647,7 @@ export function PitchView() {
                 : "Live captions aren't available in this browser (try Chrome or Edge). Type what you said to get your score."}
             </p>
             <label htmlFor="pitch-manual" className="mt-5 block text-sm font-medium">
-              Your pitch
+              Your answer
             </label>
             <textarea
               id="pitch-manual"
@@ -536,9 +658,9 @@ export function PitchView() {
             />
             <div className="mt-4 flex flex-wrap gap-2">
               <Button onClick={() => finalize(manualText)} disabled={!manualText.trim()}>
-                Score my pitch
+                Score it
               </Button>
-              <Button variant="secondary" onClick={start}>
+              <Button variant="secondary" onClick={() => start(round.kind)}>
                 Try again
               </Button>
               <Button variant="ghost" onClick={backToSetup}>
@@ -550,17 +672,30 @@ export function PitchView() {
           <div className="card-pop rounded-3xl bg-surface p-10">
             <Spinner className="mx-auto size-8 text-pine" />
             <p className="mt-4 font-display text-xl font-bold">Counting the applause…</p>
-            <p className="mt-1 text-sm text-muted">Scoring your pitch.</p>
+            <p className="mt-1 text-sm text-muted">Scoring your {round.kind === "pitch" ? "pitch" : "answer"}.</p>
           </div>
         )}
       </div>
     );
   }
 
+  if (phase === "teleprompter" && rewrite) {
+    return (
+      <Teleprompter
+        text={rewrite.rewrite}
+        onFinish={onRehearsed}
+        onExit={() => setPhase("results")}
+        onPitchForReal={() => start("pitch")}
+      />
+    );
+  }
+
   // Results
   if (!result) return null;
   const { score } = result;
+  const isPitch = result.round.kind === "pitch";
   const parts = analyzePitch(result.text, result.seconds).parts;
+  const followUp = isPitch ? followUpFor(result.text, result.seconds) : null;
   return (
     <div>
       <div className="card-pop relative isolate overflow-hidden rounded-3xl bg-indigo p-6 text-[#fff5e9] sm:p-10">
@@ -569,16 +704,34 @@ export function PitchView() {
           <ScoreDial total={score.total} grade={score.grade} />
           <div className="text-center sm:text-left">
             <p className="inline-block rounded-full bg-sun px-3 py-1 text-xs font-bold tracking-[0.12em] text-[#221a4d] uppercase">
-              {scene.name} · {limit}s
+              {isPitch ? `${scene.name} · ${result.round.limit}s` : `Follow-up · ${scene.name}`}
             </p>
             <h1 className="mt-3 font-display text-4xl leading-none font-extrabold tracking-tight sm:text-5xl">{score.title}</h1>
-            <p className="mt-3 text-[15px] text-[#d9d2f5]">
-              {result.isBest ? "🏆 New personal best for this room! " : best[sceneId] !== undefined ? `Your best here: ${best[sceneId]}. ` : ""}
-              {streak > 0 && `🔥 ${streak}-day streak.`}
+            <p className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[15px] text-[#d9d2f5] sm:justify-start">
+              {result.xp > 0 && (
+                <span className="rounded-full border-2 border-[#0b0720] bg-[#c8f0e8] px-2.5 py-0.5 text-sm font-bold text-[#075249]">+{result.xp} XP</span>
+              )}
+              {isPitch && result.isBest && <span>🏆 New personal best for this room!</span>}
+              {isPitch && !result.isBest && best[sceneId] !== undefined && <span>Your best here: {best[sceneId]}.</span>}
+              {streak > 0 && <span>🔥 {streak}-day streak</span>}
             </p>
           </div>
         </div>
       </div>
+
+      {followUp && (
+        <section aria-labelledby="followup-title" className="card-pop mt-6 flex flex-col gap-4 rounded-2xl p-6 sm:flex-row sm:items-center sm:justify-between" style={{ backgroundColor: scene.tile }}>
+          <div className="text-[#221a4d]">
+            <h2 id="followup-title" className="text-xs font-bold tracking-[0.12em] uppercase">
+              Bonus round · {scene.promptFrom} has a follow-up
+            </h2>
+            <p className="mt-1 font-display text-2xl leading-snug font-extrabold">&ldquo;{followUp}&rdquo;</p>
+          </div>
+          <Button onClick={() => start("followUp")} className="shrink-0">
+            Answer it ({FOLLOW_UP_SECONDS}s)
+          </Button>
+        </section>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section aria-labelledby="tips-title" className="card-pop rounded-2xl bg-sun-soft p-6">
@@ -588,9 +741,7 @@ export function PitchView() {
           <ol className="mt-4 space-y-3">
             {score.tips.map((tip, i) => (
               <li key={i} className="flex gap-3">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full border-2 border-edge bg-sun font-bold text-[#221a4d]">
-                  {i + 1}
-                </span>
+                <span className="grid size-7 shrink-0 place-items-center rounded-full border-2 border-edge bg-sun font-bold text-[#221a4d]">{i + 1}</span>
                 <span className="pt-0.5 text-[15px] leading-relaxed">{tip}</span>
               </li>
             ))}
@@ -622,18 +773,70 @@ export function PitchView() {
         </section>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_1fr]">
-        <PartsChecklist parts={parts} />
+      <div className={`mt-6 grid gap-6 ${isPitch ? "lg:grid-cols-[18rem_1fr]" : ""}`}>
+        {isPitch && <PartsChecklist parts={parts} />}
         <section aria-labelledby="transcript-title" className="card-pop rounded-2xl bg-surface p-6">
-          <h2 id="transcript-title" className="font-display text-xl font-extrabold">
-            Your pitch
-          </h2>
-          <p className="mt-3 text-[15px] leading-relaxed whitespace-pre-wrap">{result.text || <span className="text-muted">No words captured.</span>}</p>
-          {recorder.audioUrl && (
-            <audio controls src={recorder.audioUrl} preload="metadata" className="mt-4 w-full" aria-label="Your recorded pitch" />
-          )}
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="transcript-title" className="font-display text-xl font-extrabold">
+              {isPitch ? "Your pitch" : "Your answer"}
+            </h2>
+            <HighlightLegend />
+          </div>
+          {!isPitch && <p className="mt-1 text-sm text-muted">Question: &ldquo;{result.round.prompt}&rdquo;</p>}
+          <div className="mt-3 text-[15px]">
+            {result.text ? <HighlightedTranscript text={result.text} /> : <p className="text-muted">No words captured.</p>}
+          </div>
+          {recorder.audioUrl && <audio controls src={recorder.audioUrl} preload="metadata" className="mt-4 w-full" aria-label="Your recording" />}
         </section>
       </div>
+
+      {(pitchResult || isPitch) && (
+        <section aria-labelledby="rewrite-title" className="card-pop mt-6 rounded-2xl bg-lilac-soft p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="rewrite-title" className="font-display text-xl font-extrabold">
+                ✍️ Make it stronger
+              </h2>
+              <p className="mt-1 text-[15px] text-muted">Get a rewrite of your pitch in the classic order, then rehearse it on the teleprompter.</p>
+            </div>
+            {!rewrite && (
+              <Button onClick={getRewrite} loading={rewriting} disabled={!(pitchResult ?? result).text.trim()}>
+                Rewrite my pitch
+              </Button>
+            )}
+          </div>
+          {rewriteError && (
+            <div className="mt-4">
+              <ErrorNote message={rewriteError} onRetry={getRewrite} />
+            </div>
+          )}
+          {rewrite && (
+            <div className="mt-5">
+              <blockquote className="rounded-2xl border-2 border-edge bg-surface p-5 font-display text-xl leading-relaxed font-semibold">{rewrite.rewrite}</blockquote>
+              <ul className="mt-4 space-y-1.5 text-[15px]">
+                {rewrite.notes.map((n, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span aria-hidden="true">💡</span>
+                    {n}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted">{rewrite.source === "ai" ? "Rewritten by AI from your own words." : "Built-in rewrite (no AI key set): fill in anything in [brackets]."}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button onClick={() => setPhase("teleprompter")}>📜 Rehearse on the teleprompter</Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(rewrite.rewrite).catch(() => {});
+                  }}
+                >
+                  Copy text
+                </Button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {saved && (
         <div className="mt-6">
@@ -647,7 +850,7 @@ export function PitchView() {
       )}
 
       <div className="mt-8 flex flex-wrap items-center gap-3">
-        <Button onClick={start}>Pitch again</Button>
+        <Button onClick={() => start("pitch")}>Pitch again</Button>
         <Button variant="secondary" onClick={backToSetup}>
           Try another room
         </Button>

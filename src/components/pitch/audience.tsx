@@ -21,6 +21,7 @@ export function Stage({
   reactions,
   floor,
   label,
+  talking = null,
 }: {
   scene: Scene;
   /** Overall mood 0–100, or null before the pitch starts (everyone neutral and attentive). */
@@ -30,6 +31,8 @@ export function Stage({
   floor?: number;
   /** Accessible description; leave empty for decorative previews. */
   label: string;
+  /** Seat index of the person currently speaking (their mouth moves). */
+  talking?: number | null;
 }) {
   return (
     <svg
@@ -43,7 +46,10 @@ export function Stage({
           key={i}
           seat={seat}
           index={i}
-          mood={mood === null ? "neutral" : moodLevel(Math.max(0, Math.min(100, mood + (OFFSETS[i % OFFSETS.length] ?? 0))))}
+          talking={talking === i}
+          mood={
+            talking === i ? "engaged" : mood === null ? "neutral" : moodLevel(Math.max(0, Math.min(100, mood + (OFFSETS[i % OFFSETS.length] ?? 0))))
+          }
         />
       ))}
       <Foreground scene={scene} />
@@ -204,7 +210,7 @@ function Plant({ x, y }: { x: number; y: number }) {
 
 /* ---------------------------------- People ----------------------------------- */
 
-const Person = memo(function Person({ seat, index, mood }: { seat: Seat; index: number; mood: MoodLevel }) {
+const Person = memo(function Person({ seat, index, mood, talking }: { seat: Seat; index: number; mood: MoodLevel; talking: boolean }) {
   const { look } = seat;
   // Some restless people pull out a phone; others just look away.
   const phone = mood === "restless" && index % 2 === 0;
@@ -218,7 +224,7 @@ const Person = memo(function Person({ seat, index, mood }: { seat: Seat; index: 
         <rect x="-9" y="28" width="18" height="24" fill={look.skin} />
         <circle r="34" fill={look.skin} stroke={INK} strokeWidth="3" />
         <Hair look={look} />
-        <Face mood={mood} glasses={look.glasses} />
+        <Face mood={mood} glasses={look.glasses} talking={talking} />
         {phone && (
           <g>
             <rect x="14" y="30" width="20" height="32" rx="4" fill={INK} />
@@ -280,7 +286,7 @@ function Hair({ look }: { look: Look }) {
   }
 }
 
-function Face({ mood, glasses }: { mood: MoodLevel; glasses?: boolean }) {
+function Face({ mood, glasses, talking }: { mood: MoodLevel; glasses?: boolean; talking?: boolean }) {
   const eye = { fill: INK };
   const line = { fill: "none", stroke: INK, strokeWidth: 3.5, strokeLinecap: "round" } as const;
   return (
@@ -330,13 +336,14 @@ function Face({ mood, glasses }: { mood: MoodLevel; glasses?: boolean }) {
       )}
 
       {/* Mouth */}
-      {mood === "cheering" && (
+      {talking && <ellipse className="pr-talk-mouth" cx="0" cy="15" rx="9" ry="7" fill={INK} />}
+      {!talking && mood === "cheering" && (
         <g>
           <path d="M-14 9Q0 32 14 9z" fill={INK} />
           <path d="M-6 20Q0 26 6 20" fill="#ff7a59" />
         </g>
       )}
-      {mood === "engaged" && <path d="M-12 11Q0 22 12 11" {...line} />}
+      {!talking && mood === "engaged" && <path d="M-12 11Q0 22 12 11" {...line} />}
       {mood === "neutral" && <path d="M-8 15H8" {...line} />}
       {mood === "restless" && <path d="M-10 16Q-5 12 0 16Q5 20 10 16" {...line} strokeWidth={3} />}
       {mood === "bored" && <ellipse cx="0" cy="16" rx="6" ry="8" fill={INK} />}

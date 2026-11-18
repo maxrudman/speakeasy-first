@@ -15,7 +15,8 @@ import {
   overallScore,
   type Analysis,
 } from "./speech-analysis";
-import { VOCAB_LEVELS, type AnalyzeInput, type Difficulty, type VocabLevel } from "./validation";
+import { builtinRewrite } from "./pitch";
+import { VOCAB_LEVELS, type AnalyzeInput, type Difficulty, type PitchRewriteInput, type VocabLevel } from "./validation";
 
 /**
  * All AI calls live here. The app uses whichever provider has a key set:
@@ -306,6 +307,46 @@ Reply with only JSON in this exact shape, no other text:
     }
   }
   return builtinAnalysis(input);
+}
+
+/* ---------------------------------- Pitch Room ---------------------------------- */
+
+const rewriteReplySchema = z.object({
+  rewrite: z.string().min(20).max(2000),
+  notes: z.array(z.string().min(1).max(300)).min(1).max(3),
+});
+
+export type PitchRewrite = z.infer<typeof rewriteReplySchema> & { source: AiSource };
+
+/** Rewrites an elevator pitch to be stronger, keeping the speaker's real facts. Falls back to a rules-based rewrite. */
+export async function rewritePitch(input: PitchRewriteInput): Promise<PitchRewrite> {
+  if (hasAi()) {
+    try {
+      const targetWords = Math.round((input.seconds * 145) / 60);
+      const system = `You are an expert interview and public-speaking coach. You rewrite a speaker's elevator pitch so it is stronger but still sounds like them and only uses facts they actually said.`;
+      const prompt = `## Setting
+${input.scene || "Interview"}${input.prompt ? ` (they were asked: "${input.prompt}")` : ""}
+${input.goal ? `They're pitching for: ${input.goal}` : ""}
+Time limit: ${input.seconds} seconds, so aim for about ${targetWords} words.
+
+## Their pitch (from browser speech recognition, so ignore missing punctuation and mis-heard words)
+"""
+${input.pitch}
+"""
+
+Rewrite it as a spoken pitch in this order: who they are → what they do → one concrete result (a number if they gave one) → a clear ask. Cut filler words and hedges. Keep it natural and conversational, first person. Never invent facts: if a part is missing, insert a short placeholder in square brackets for them to fill in, like [a result with a number].
+
+Then give two or three short notes on what you changed and why.
+
+Reply with only JSON in this exact shape, no other text:
+{"rewrite":"...","notes":["...","..."]}`;
+      const reply = await askForJson(prompt, rewriteReplySchema, system);
+      return { ...reply, source: "ai" };
+    } catch (err) {
+      console.warn("[ai] rewritePitch failed, using built-in rewrite:", (err as Error).message);
+    }
+  }
+  return { ...builtinRewrite(input.pitch, input.goal), source: "builtin" };
 }
 
 function shuffle<T>(items: T[]): T[] {
