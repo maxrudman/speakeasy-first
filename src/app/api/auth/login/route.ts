@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { jsonError, parseBody } from "@/lib/api";
+import { log } from "@/lib/log";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/session";
 
 const loginSchema = z.object({
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
     res.cookies.set(SESSION_COOKIE, await signSession(user.id), sessionCookieOptions);
     return res;
   } catch (err) {
-    console.error("[login]", err);
+    log.error("auth.login_failed", err);
     return jsonError("Couldn't log you in. Try again.", 500);
   }
 }

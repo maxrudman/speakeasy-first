@@ -115,7 +115,7 @@ export function JournalView() {
       <div className="mt-10">
         {entries.length > 0 && (
           <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 className="font-display text-lg font-semibold">
+            <h2 className="shrink-0 whitespace-nowrap font-display text-lg font-semibold">
               {entries.length} {entries.length === 1 ? "entry" : "entries"}
             </h2>
             <label className="relative w-full max-w-xs">
@@ -233,16 +233,17 @@ function EntryCard({
           {entry.response}
         </p>
       </button>
-      {expanded && (
-        <div className="flex justify-end gap-1 border-t border-line px-3 py-2">
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+      <div className="flex items-center justify-between gap-1 border-t border-line px-3 py-1.5">
+        <span className="px-2 text-xs text-muted">{expanded ? "" : entry.response.length > 160 ? "Tap to read all" : ""}</span>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setEditing(true)} aria-label={`Edit entry: ${entry.prompt}`}>
             Edit
           </Button>
-          <Button variant="ghost" size="sm" onClick={onDelete} className="hover:!text-coral">
+          <Button variant="ghost" size="sm" onClick={onDelete} className="hover:!text-coral" aria-label={`Delete entry: ${entry.prompt}`}>
             Delete
           </Button>
         </div>
-      )}
+      </div>
     </article>
   );
 }

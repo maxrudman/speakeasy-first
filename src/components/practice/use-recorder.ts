@@ -53,6 +53,10 @@ export function useRecorder() {
   const urlRef = useRef<string | null>(null);
   const meter = useRef<VoiceMeter | null>(null);
   const startedAt = useRef(0);
+  // Set by reset(): the take being stopped was deleted, so don't turn it into playable audio.
+  const discardTake = useRef(false);
+  // Guards against a tight restart loop when recognition keeps erroring.
+  const restarts = useRef({ count: 0, windowStart: 0 });
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- browser feature detection after mount
@@ -95,6 +99,7 @@ export function useRecorder() {
     }
 
     releaseAudio();
+    discardTake.current = false;
     setFinalText("");
     setInterimText("");
     setSeconds(0);
@@ -114,6 +119,12 @@ export function useRecorder() {
       if (e.data.size > 0) chunks.current.push(e.data);
     };
     recorder.onstop = () => {
+      if (discardTake.current) {
+        discardTake.current = false;
+        chunks.current = [];
+        cleanupStream();
+        return;
+      }
       const blob = new Blob(chunks.current, { type: recorder.mimeType || "audio/webm" });
       const url = URL.createObjectURL(blob);
       urlRef.current = url;
@@ -144,19 +155,29 @@ export function useRecorder() {
         if (finalChunk) setFinalText((t) => `${t}${t && !t.endsWith(" ") ? " " : ""}${finalChunk.trim()}`);
         setInterimText(interim);
       };
+      let fatal = false;
       rec.onerror = (e) => {
-        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        if (e.error === "not-allowed" || e.error === "service-not-allowed" || e.error === "language-not-supported") {
+          fatal = true;
           setTranscriptionSupported(false);
         }
       };
-      // Chrome ends recognition after a pause; restart it while still recording.
+      // Chrome ends recognition after a pause; restart it while still recording,
+      // but give up if it keeps ending immediately (more than 8 restarts in 10 seconds).
+      restarts.current = { count: 0, windowStart: Date.now() };
       rec.onend = () => {
-        if (isRecording.current) {
-          try {
-            rec.start();
-          } catch {
-            /* already started */
-          }
+        if (!isRecording.current || fatal) return;
+        const now = Date.now();
+        if (now - restarts.current.windowStart > 10_000) restarts.current = { count: 0, windowStart: now };
+        restarts.current.count += 1;
+        if (restarts.current.count > 8) {
+          setTranscriptionSupported(false);
+          return;
+        }
+        try {
+          rec.start();
+        } catch {
+          /* already started */
         }
       };
       try {
@@ -187,7 +208,10 @@ export function useRecorder() {
 
   /** Discards the current take (audio and transcript). */
   const reset = useCallback(() => {
-    if (isRecording.current) stop();
+    if (isRecording.current) {
+      discardTake.current = true;
+      stop();
+    }
     releaseAudio();
     setFinalText("");
     setInterimText("");

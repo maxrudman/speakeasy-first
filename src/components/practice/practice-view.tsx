@@ -41,6 +41,7 @@ export function PracticeView() {
     const res = await api<QuestionsResponse>("/api/practice/questions", {
       method: "POST",
       body: { ...aud, exclude },
+      timeoutMs: 70_000,
     });
     setSource(res.source);
     return res.questions;
@@ -92,12 +93,31 @@ export function PracticeView() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [hasTake]);
 
-  function goNext() {
+  async function goNext() {
     recorder.reset();
-    const nextIndex = Math.min(index + 1, questions.length - 1);
-    setIndex(nextIndex);
     setConfirm(null);
-    if (audience) prefetchIfNeeded(audience, questions, nextIndex);
+    if (index < questions.length - 1) {
+      const nextIndex = index + 1;
+      setIndex(nextIndex);
+      if (audience) prefetchIfNeeded(audience, questions, nextIndex);
+      return;
+    }
+    // Last question and the background batch hasn't arrived: load more now, then move on.
+    if (!audience || fetchingMore.current) return;
+    fetchingMore.current = true;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const more = (await fetchQuestions(audience, questions)).filter((q) => !questions.includes(q));
+      if (!more.length) throw new Error("No new questions came back. Try changing your audience details.");
+      setQuestions([...questions, ...more]);
+      setIndex(index + 1);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      fetchingMore.current = false;
+      setLoadingMore(false);
+    }
   }
 
   function requestNext() {
@@ -121,7 +141,10 @@ export function PracticeView() {
 
       {error && (
         <div className="mt-4">
-          <ErrorNote message={error} onRetry={audience ? () => generate(audience) : undefined} />
+          <ErrorNote
+            message={error}
+            onRetry={audience ? () => (questions.length ? goNext() : generate(audience)) : undefined}
+          />
         </div>
       )}
 
@@ -143,8 +166,8 @@ export function PracticeView() {
               ) : (
                 <span />
               )}
-              <Button variant="secondary" onClick={requestNext} disabled={atEnd && loadingMore}>
-                Next question
+              <Button variant="secondary" onClick={requestNext} loading={atEnd && loadingMore}>
+                {atEnd && loadingMore ? "Loading more…" : "Next question"}
               </Button>
             </div>
           </div>

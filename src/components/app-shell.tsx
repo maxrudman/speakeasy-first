@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { OfflineBanner } from "./error-state";
 import { levelFor } from "@/lib/game";
 import { DeckShapes } from "./deck-shapes";
 import { GameProvider, useGame } from "./game/game-provider";
@@ -45,6 +46,7 @@ function Shell({ username, children }: { username: string; children: ReactNode }
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[17.5rem_1fr] lg:grid-cols-[19rem_1fr]">
+      <OfflineBanner />
       {/* Desktop sidebar: the deck's indigo title slide. */}
       <aside className="on-indigo sticky top-0 isolate hidden h-screen self-start overflow-hidden bg-indigo text-[#fff5e9] md:flex md:flex-col">
         <DeckShapes className="pointer-events-none absolute -bottom-24 -left-20 -z-10 w-80 opacity-[0.18]" />

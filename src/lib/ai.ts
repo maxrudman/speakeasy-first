@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { FALLBACK_TERMS, type FallbackTerm } from "@/data/fallback-terms";
 import { fallbackQuestions } from "@/data/fallback-questions";
+import { log } from "./log";
 import {
   CATEGORIES,
   CATEGORY_GUIDE,
@@ -145,7 +146,7 @@ Reply with only JSON in this exact shape, no other text:
       const unique = dedupe(terms, excludeKeys).slice(0, opts.count);
       if (unique.length) return { terms: unique, source: "ai" };
     } catch (err) {
-      console.warn("[ai] generateTerms failed, using built-in terms:", (err as Error).message);
+      log.error("ai.generate_terms_failed", err, { fallback: "builtin" });
     }
   }
 
@@ -224,7 +225,7 @@ Reply with only JSON in this exact shape, no other text:
       const fresh = questions.filter((q) => !seen.has(q.toLowerCase())).slice(0, count);
       if (fresh.length) return { questions: fresh, source: "ai" };
     } catch (err) {
-      console.warn("[ai] generateQuestions failed, using built-in questions:", (err as Error).message);
+      log.error("ai.generate_questions_failed", err, { fallback: "builtin" });
     }
   }
 
@@ -303,7 +304,7 @@ Reply with only JSON in this exact shape, no other text:
       }
       throw new Error("Reply was missing rubric categories");
     } catch (err) {
-      console.warn("[ai] analyzeSpeech failed, using built-in grader:", (err as Error).message);
+      log.error("ai.analyze_speech_failed", err, { fallback: "builtin" });
     }
   }
   return builtinAnalysis(input);
@@ -343,7 +344,7 @@ Reply with only JSON in this exact shape, no other text:
       const reply = await askForJson(prompt, rewriteReplySchema, system);
       return { ...reply, source: "ai" };
     } catch (err) {
-      console.warn("[ai] rewritePitch failed, using built-in rewrite:", (err as Error).message);
+      log.error("ai.rewrite_pitch_failed", err, { fallback: "builtin" });
     }
   }
   return { ...builtinRewrite(input.pitch, input.goal), source: "builtin" };

@@ -1,3 +1,4 @@
+import { OfflineBanner } from "@/components/error-state";
 import { Logo } from "@/components/logo";
 import { DeckShapes } from "@/components/deck-shapes";
 
@@ -5,6 +6,7 @@ import { DeckShapes } from "@/components/deck-shapes";
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <OfflineBanner />
       {/* Title slide (decorative copy; the form side has the real heading). */}
       <section
         aria-label="About SpeakEasy"

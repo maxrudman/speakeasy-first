@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { jsonError, parseBody } from "@/lib/api";
+import { isUniqueViolation, log } from "@/lib/log";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/session";
 import { credentialsSchema } from "@/lib/validation";
 
@@ -28,7 +29,9 @@ export async function POST(req: Request) {
     res.cookies.set(SESSION_COOKIE, await signSession(user.id), sessionCookieOptions);
     return res;
   } catch (err) {
-    console.error("[signup]", err);
+    // Two sign-ups for the same name at the same moment: the unique index catches the second.
+    if (isUniqueViolation(err)) return jsonError("That username is taken. Try another.", 409);
+    log.error("auth.signup_failed", err);
     return jsonError("Couldn't create your account. Try again.", 500);
   }
 }
