@@ -294,3 +294,149 @@ function pitchTips(
     .slice(0, 3)
     .map((x) => x.text);
 }
+
+/* ------------------------------ Transcript highlights ----------------------------- */
+
+export type HighlightKind = "filler" | "hedge" | "strong";
+export type Segment = { text: string; kind: HighlightKind | null; start: number };
+
+const STRONG_RES: RegExp[] = [
+  /\bmy name(?:'s| is) \w+/gi,
+  /\b(?:i'm|i am) (?!(?:a|an|the|so|very|really|just|also|currently|here|from|at|in|on|with|working|studying|majoring|looking|interested|excited|passionate|hoping|going|trying|not|glad|happy|thrilled|based|originally|part|one)\b)[a-z]+/gi,
+  new RegExp(PART_RES.ask.source, "gi"),
+  new RegExp(PROOF_VERB_RE.source, "gi"),
+  new RegExp(NUMBER_RE.source, "gi"),
+  /\b(?:i study|i'm studying|majoring in|i work (?:at|in|as)|i lead|i run|i manage)\b/gi,
+];
+
+/**
+ * Splits a transcript into plain text and highlighted spans: filler words, hedges and
+ * strong moments (name, results, numbers, the ask). `start` is a stable key for animation.
+ */
+export function highlightPitch(text: string): Segment[] {
+  const ranges: { start: number; end: number; kind: HighlightKind }[] = [];
+  const add = (re: RegExp, kind: HighlightKind) => {
+    re.lastIndex = 0;
+    for (const m of text.matchAll(new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`))) {
+      // Some patterns include the space before the word; highlight only the words.
+      const lead = m[0].length - m[0].trimStart().length;
+      const start = (m.index ?? 0) + lead;
+      const end = (m.index ?? 0) + m[0].trimEnd().length;
+      if (end > start && !ranges.some((r) => start < r.end && end > r.start)) ranges.push({ start, end, kind });
+    }
+  };
+  for (const { re } of FILLER_PATTERNS) add(re, "filler");
+  add(HEDGE_RE, "hedge");
+  for (const re of STRONG_RES) add(re, "strong");
+  ranges.sort((a, b) => a.start - b.start);
+
+  const out: Segment[] = [];
+  let pos = 0;
+  for (const r of ranges) {
+    if (r.start > pos) out.push({ text: text.slice(pos, r.start), kind: null, start: pos });
+    out.push({ text: text.slice(r.start, r.end), kind: r.kind, start: r.start });
+    pos = r.end;
+  }
+  if (pos < text.length) out.push({ text: text.slice(pos), kind: null, start: pos });
+  return out;
+}
+
+/* --------------------------------- Follow-up round -------------------------------- */
+
+/** The interviewer's follow-up, aimed at the weakest part of the pitch. */
+export function followUpFor(text: string, seconds: number): string {
+  const a = analyzePitch(text, Math.max(seconds, 1));
+  if (!a.parts.proof) return "Can you give me a specific example of something you've accomplished?";
+  if (!a.parts.ask) return "So what exactly are you looking for right now?";
+  if (!a.parts.role) return "Tell me a bit more about what you do day to day.";
+  const generic = [
+    "What's one strength you'd bring to our team?",
+    "Why this role, and why now?",
+    "What's a challenge you've overcome recently?",
+  ];
+  return generic[a.words % generic.length];
+}
+
+/**
+ * Scores a follow-up answer. Same delivery rules as the pitch; "Structure" becomes
+ * "Substance": did they back it up with a specific example?
+ */
+export function scoreFollowUp(text: string, seconds: number, limitSeconds: number, cutOff: boolean): PitchScore {
+  const base = scorePitch(text, seconds, limitSeconds, cutOff);
+  const a = analyzePitch(text, Math.max(seconds, 1));
+  const example = /\b(?:for example|for instance|one time|when i|last (?:year|semester|summer|month)|recently)\b/i.test(text);
+  const substance = Math.min(40, (a.parts.proof ? 20 : 0) + (example ? 12 : 0) + (a.numbers > 0 ? 8 : 0));
+  const breakdown = base.breakdown.map((b) => (b.id === "structure" ? { ...b, label: "Substance", points: substance } : b));
+  let total = breakdown.reduce((n, b) => n + b.points, 0);
+  if (a.words < 12) total = Math.min(total, 30);
+  total = Math.max(0, Math.min(100, Math.round(total)));
+  const tips = [...base.tips.filter((t) => !/^(?:Open with your name|Say what you do|End with an ask)/.test(t))];
+  if (!example) tips.unshift('Anchor your answer in a real moment: "For example, last semester I…"');
+  return { total, ...gradeFor(total), breakdown, tips: tips.slice(0, 3) };
+}
+
+/* ---------------------------------- Built-in rewrite ------------------------------- */
+
+const FILLER_STRIP = /\b(?:u+m+|u+h+|e+r+m*|a+h+|you know|i mean|basically|literally|so yeah|kind of|sort of|i think|i guess|just)\b,?\s*/gi;
+
+function sentences(text: string): string[] {
+  return text
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+|\s+(?=(?:and then|so|but)\s)/i)
+    .map((s) =>
+      s
+        .replace(FILLER_STRIP, "")
+        .replace(/\s+/g, " ")
+        .replace(/\s+([,.!?])/g, "$1")
+        .replace(/,+([.!?])/g, "$1")
+        .trim(),
+    )
+    .filter((s) => s.split(" ").length >= 3);
+}
+
+function capitalize(s: string) {
+  const t = s.trim().replace(/[,;]+$/, "");
+  const c = t.charAt(0).toUpperCase() + t.slice(1);
+  return /[.!?]$/.test(c) ? c : `${c}.`;
+}
+
+/**
+ * A rules-based rewrite for when no AI provider is set: keeps the speaker's own best
+ * sentences, orders them as name → role → proof → ask, removes fillers and hedges, and
+ * fills any missing part with a clearly marked placeholder to complete.
+ */
+export function builtinRewrite(text: string, goal: string): { rewrite: string; notes: string[] } {
+  const all = sentences(text);
+  const find = (test: (s: string) => boolean) => all.find(test);
+  const nameMatch = /\bmy name(?:'s| is) ([a-z]+(?: [a-z]+)?)/i.exec(text) ?? /\b(?:i'm|i am) ([A-Z][a-z]+)\b/.exec(text);
+  const name = nameMatch?.[1];
+
+  const role = find((s) => PART_RES.role.test(s) && !/\bmy name\b/i.test(s));
+  const proof = find((s) => (PROOF_VERB_RE.test(s) || new RegExp(NUMBER_RE.source, "i").test(s)) && s !== role);
+  const ask = find((s) => PART_RES.ask.test(s) && s !== role && s !== proof);
+
+  const notes: string[] = [];
+  const parts: string[] = [];
+  parts.push(name ? `Hi, I'm ${name.replace(/\b\w/g, (c) => c.toUpperCase())}.` : "Hi, I'm [your name].");
+  if (role) parts.push(capitalize(role));
+  else {
+    parts.push("I'm a [your role, year or major] focused on [your field].");
+    notes.push("Add one line on what you do or study.");
+  }
+  if (proof) parts.push(capitalize(proof));
+  else {
+    parts.push("Recently, I [a result you drove, with a number: grew, led, built, saved…].");
+    notes.push("Add one concrete result with a number.");
+  }
+  if (ask) parts.push(capitalize(ask));
+  else {
+    parts.push(
+      goal.trim()
+        ? `My goal right now: ${goal.trim().replace(/[.!?]+$/, "")}. I'd love to talk about how I can help.`
+        : "I'm looking for [the role or opportunity you want], and I'd love to talk about how I can help.",
+    );
+    notes.push("End with a clear ask.");
+  }
+  if (!notes.length) notes.push("Tightened your wording, cut filler words and put your strongest parts in the classic order.");
+  return { rewrite: parts.join(" "), notes };
+}

@@ -74,3 +74,12 @@ export const journalEntrySchema = z.object({
   prompt: z.string().trim().min(1, "is required").max(1000),
   response: z.string().trim().min(1, "is required").max(20000),
 });
+
+export const pitchRewriteSchema = z.object({
+  pitch: z.string().trim().min(1, "is required").max(4000),
+  scene: z.string().trim().max(60).default(""),
+  prompt: z.string().trim().max(200).default(""),
+  goal: z.string().trim().max(120).default(""),
+  seconds: z.number().int().min(15).max(120).default(60),
+});
+export type PitchRewriteInput = z.infer<typeof pitchRewriteSchema>;

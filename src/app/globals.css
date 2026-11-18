@@ -231,3 +231,55 @@ a.btn-pop:active {
   .pr-neutral, .pr-engaged, .pr-cheering, .pr-restless, .pr-bored, .pitch-wave, .pitch-zzz, .pitch-pop { animation: none; }
   .confetti-piece { display: none; }
 }
+
+/* ------------------------------ Wow layer ------------------------------ */
+
+/* Celebration card (level up, badges, daily challenge). */
+@keyframes celebrate-in {
+  0% { opacity: 0; transform: translateY(-16px) scale(0.92) rotate(-2deg); }
+  60% { opacity: 1; transform: translateY(2px) scale(1.02) rotate(0.5deg); }
+  100% { transform: none; }
+}
+.celebrate-in { animation: celebrate-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+
+/* Live transcript highlights: new words flash in. */
+@keyframes hl-flash {
+  0% { transform: scale(1.18); filter: brightness(1.15); }
+  100% { transform: none; filter: none; }
+}
+.hl {
+  display: inline-block;
+  border-radius: 0.4rem;
+  padding: 0 0.2rem;
+  margin: 0 0.02rem;
+  font-weight: 650;
+  animation: hl-flash 450ms ease-out;
+}
+.hl-filler { background: #ffd9cc; color: #8f2a14; box-shadow: inset 0 -2px 0 #ff7a59; }
+.hl-hedge { background: #ece5ff; color: #3d2f84; box-shadow: inset 0 -2px 0 #9b87f5; }
+.hl-strong { background: #c8f0e8; color: #075249; box-shadow: inset 0 -2px 0 #1aa89a, 0 0 14px rgb(26 168 154 / 0.35); }
+
+/* The interviewer's mouth while they speak. */
+@keyframes talk {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+.pr-talk-mouth { transform-box: fill-box; transform-origin: center; animation: talk 0.22s ease-in-out infinite; }
+
+/* Landing page: big floating shapes and a marquee. */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  50% { transform: translate(10px, -14px) rotate(4deg); }
+}
+.drift { animation: drift 9s ease-in-out infinite; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.marquee { animation: marquee 28s linear infinite; }
+@keyframes typing-caret { 50% { opacity: 0; } }
+.caret { animation: typing-caret 1s steps(1) infinite; }
+
+/* Teleprompter: the current line glows. */
+.prompter-line { transition: opacity 250ms, transform 250ms, color 250ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .celebrate-in, .hl, .pr-talk-mouth, .drift, .marquee, .caret { animation: none; }
+}

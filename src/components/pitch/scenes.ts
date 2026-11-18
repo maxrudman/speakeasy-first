@@ -14,6 +14,8 @@ export type Scene = {
   prompt: string;
   /** Who's speaking the prompt, for the speech bubble. */
   promptFrom: string;
+  /** Seat of the person who asks questions (their mouth moves while they talk). None for the stage host, who's offstage. */
+  speaker: number | null;
   defaultSeconds: 30 | 60 | 90;
   /** Card color in the picker (deck pastel). */
   tile: string;
@@ -61,6 +63,7 @@ export const SCENES: Scene[] = [
     tagline: "Across the desk from a hiring manager.",
     prompt: "So… tell me about yourself.",
     promptFrom: "Hiring manager",
+    speaker: 0,
     defaultSeconds: 60,
     tile: "#ffd9cc",
     seats: [{ x: 400, y: 196, s: 1.55, look: { skin: SKIN[2], hair: HAIR[0], shirt: "#4b3d8f", style: "bun", glasses: true }, label: "Hiring Manager" }],
@@ -71,6 +74,7 @@ export const SCENES: Scene[] = [
     tagline: "Three interviewers. Three different moods.",
     prompt: "Walk us through who you are and why you're here.",
     promptFrom: "The panel",
+    speaker: 1,
     defaultSeconds: 90,
     tile: "#c8f0e8",
     seats: [
@@ -85,6 +89,7 @@ export const SCENES: Scene[] = [
     tagline: "You and the CEO. 30 floors. Go.",
     prompt: "Oh, hey. What do you do?",
     promptFrom: "The CEO",
+    speaker: 0,
     defaultSeconds: 30,
     tile: "#ffe9a8",
     seats: [{ x: 470, y: 190, s: 1.5, look: { skin: SKIN[3], hair: HAIR[4], shirt: "#221a4d", style: "short", glasses: true }, label: "CEO" }],
@@ -95,6 +100,7 @@ export const SCENES: Scene[] = [
     tagline: "A full room. A spotlight. A mic.",
     prompt: "Please welcome our next speaker!",
     promptFrom: "The host",
+    speaker: null,
     defaultSeconds: 60,
     tile: "#ddd2ff",
     seats: crowd(),
