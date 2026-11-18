@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-## Project conventions (Speak Ready)
+## Project conventions (SpeakEasy)
 
 - Stack: Next.js 16 App Router, TypeScript, Tailwind v4, Drizzle ORM on Postgres, deployed on Vercel. `cacheComponents` is intentionally off.
 - Auth: `src/proxy.ts` (Next 16's renamed middleware) redirects logged-out page visits. API routes wrap handlers in `withUser()` from `src/lib/api.ts` and must filter every query by `user.id`.
