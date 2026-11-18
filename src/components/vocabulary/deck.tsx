@@ -192,7 +192,7 @@ export function Deck({
           <Stat label="Streak" value={streak} />
           {source === "builtin" && (
             <p className="w-full text-xs text-muted">
-              Using the built-in word list. Add an Anthropic API key to get terms tailored to your field.
+              Using the built-in word list. Add a free Groq API key (see README) to get terms tailored to your field.
             </p>
           )}
         </dl>

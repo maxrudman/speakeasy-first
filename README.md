@@ -28,7 +28,8 @@ Open `.env.local` and fill in:
 |---|---|
 | `DATABASE_URL` | Your own free database at [neon.tech](https://neon.tech). Create a project, then copy the pooled connection string. Each teammate should use their **own** database (or their own Neon branch) so you don't overwrite each other's test data. |
 | `SESSION_SECRET` | Run `openssl rand -base64 32` and paste the result. Any random string of 32+ characters works. |
-| `ANTHROPIC_API_KEY` | Strongly recommended. From [console.anthropic.com](https://console.anthropic.com). Powers tailored vocabulary, setting-specific practice questions, and full speech feedback. Without it, the app uses built-in lists and a basic rules-based grader. |
+| `GROQ_API_KEY` | Strongly recommended, and free (no credit card). From [console.groq.com/keys](https://console.groq.com/keys). Powers tailored vocabulary, setting-specific practice questions, and full speech feedback. Without an AI key, the app uses built-in lists and a basic rules-based grader. |
+| `ANTHROPIC_API_KEY` | Optional, paid. Uses Claude instead of Groq when set. From [console.anthropic.com](https://console.anthropic.com). |
 
 Then:
 
@@ -43,7 +44,7 @@ npm run dev          # http://localhost:3000
 1. Push the repo to GitHub (see *First push* below).
 2. Go to [vercel.com/new](https://vercel.com/new) and import the repo. Leave the framework settings as they are.
 3. Add a database: in the Vercel project go to **Storage → Create → Neon (Postgres)** and connect it to the project. This sets `DATABASE_URL` for you.
-4. In **Settings → Environment Variables**, add `SESSION_SECRET` (a new random value, not the one from your laptop) and, if you have one, `ANTHROPIC_API_KEY`.
+4. In **Settings → Environment Variables**, add `SESSION_SECRET` (a new random value, not the one from your laptop) and `GROQ_API_KEY` (free, see above).
 5. Deploy. Database tables are created and updated automatically during each Vercel build (see `scripts/migrate.ts`).
 
 After that, every push to `main` deploys to production, and every pull request gets its own preview URL that teammates can click and test.
@@ -94,7 +95,7 @@ src/
     question-bank.ts            Journal's common questions list
   db/schema.ts                  Database tables
   lib/
-    ai.ts                       All Claude API calls, with fallbacks
+    ai.ts                       All AI calls (Claude or Groq), with fallbacks
     vocab-rules.ts              Spaced repetition rules (tweak the numbers here)
     auth.ts, session.ts         Login sessions
   proxy.ts                      Redirects logged-out visitors to /login
@@ -109,4 +110,4 @@ drizzle/                        Database migrations (commit these)
 
 **Speech analysis.** While you record, the browser measures pace, pauses, pitch variation and volume (`src/components/practice/voice-meter.ts`). Only those numbers and the transcript are sent for grading; the audio never leaves the device. Claude grades six categories (clarity and relevance, substance, structure, word choice, professionalism, vocal delivery) against the expectations of the setting, and the difficulty sets how strict it is. The rubric and the built-in backup grader live in `src/lib/speech-analysis.ts`.
 
-**AI fallbacks.** Every Claude call in `src/lib/ai.ts` falls back to the built-in lists if there's no API key or the request fails, so the app never breaks because of the API.
+**AI providers and fallbacks.** All AI calls are in `src/lib/ai.ts`. It uses Claude if `ANTHROPIC_API_KEY` is set, otherwise Groq's free plan if `GROQ_API_KEY` is set. Every call falls back to the built-in lists if there's no API key or the request fails, so the app never breaks because of the API.

@@ -18,36 +18,87 @@ import {
 import { VOCAB_LEVELS, type AnalyzeInput, type Difficulty, type VocabLevel } from "./validation";
 
 /**
- * All Claude API calls live here. Every function falls back to the built-in
- * lists in /src/data when ANTHROPIC_API_KEY is missing or a request fails,
- * so the app always keeps working. `source` tells the UI which one was used.
+ * All AI calls live here. The app uses whichever provider has a key set:
+ *  - ANTHROPIC_API_KEY: Claude (paid, highest quality)
+ *  - GROQ_API_KEY: Groq's free plan (no credit card; about 1,000 requests a day)
+ * With neither, or if a request fails, every function falls back to the
+ * built-in lists in /src/data, so the app always keeps working.
+ * `source` tells the UI which one was used.
  */
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
+const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+const GROQ_URL = `${process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1"}/chat/completions`;
 const TIMEOUT_MS = 25_000;
 
 export type AiSource = "ai" | "builtin";
 
-function getClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-  return new Anthropic({ apiKey, timeout: TIMEOUT_MS, maxRetries: 1 });
+type Provider = "anthropic" | "groq";
+
+function getProvider(): Provider | null {
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (process.env.GROQ_API_KEY) return "groq";
+  return null;
 }
 
-/** Sends a prompt and parses the first JSON value in the reply against a schema. */
-async function askForJson<T extends z.ZodType>(prompt: string, schema: T, system?: string): Promise<z.infer<T>> {
-  const client = getClient();
-  if (!client) throw new Error("ANTHROPIC_API_KEY not set");
+/** True when an AI provider is configured. */
+function hasAi() {
+  return getProvider() !== null;
+}
 
+async function askClaude(prompt: string, system?: string): Promise<string> {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: TIMEOUT_MS, maxRetries: 1 });
   const message = await client.messages.create({
-    model: MODEL,
+    model: ANTHROPIC_MODEL,
     max_tokens: 4000,
     ...(system ? { system } : {}),
     messages: [{ role: "user", content: prompt }],
   });
-  const text = message.content
-    .map((block) => (block.type === "text" ? block.text : ""))
-    .join("");
+  return message.content.map((block) => (block.type === "text" ? block.text : "")).join("");
+}
+
+/** Groq speaks the OpenAI chat format. One retry covers brief rate-limit or network blips. */
+async function askGroq(prompt: string, system?: string): Promise<string> {
+  const body = JSON.stringify({
+    model: GROQ_MODEL,
+    messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 6000,
+    ...(GROQ_MODEL.startsWith("openai/gpt-oss") ? { reasoning_effort: "low", include_reasoning: false } : {}),
+  });
+  let lastError: Error = new Error("Groq request failed");
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+        body,
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) {
+        const detail = (await res.text()).slice(0, 300);
+        lastError = new Error(`Groq ${res.status}: ${detail}`);
+        // Bad key or bad request won't fix itself; rate limits and server errors might.
+        if (res.status !== 429 && res.status < 500) break;
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      const text = data.choices?.[0]?.message?.content;
+      if (!text) throw new Error("Groq returned an empty reply");
+      return text;
+    } catch (err) {
+      lastError = err as Error;
+    }
+  }
+  throw lastError;
+}
+
+/** Sends a prompt to the configured provider and parses the first JSON value in the reply against a schema. */
+async function askForJson<T extends z.ZodType>(prompt: string, schema: T, system?: string): Promise<z.infer<T>> {
+  const provider = getProvider();
+  if (!provider) throw new Error("No AI key set");
+  const text = provider === "anthropic" ? await askClaude(prompt, system) : await askGroq(prompt, system);
   const start = text.search(/[[{]/);
   const end = Math.max(text.lastIndexOf("]"), text.lastIndexOf("}"));
   if (start === -1 || end < start) throw new Error("No JSON found in model reply");
@@ -75,7 +126,7 @@ export async function generateTerms(opts: {
 }): Promise<{ terms: GeneratedTerm[]; source: AiSource }> {
   const excludeKeys = new Set(opts.exclude.map((t) => t.toLowerCase()));
 
-  if (getClient()) {
+  if (hasAi()) {
     try {
       const prompt = `You are building a personal vocabulary deck.
 
@@ -146,7 +197,7 @@ export async function generateQuestions(opts: {
 }): Promise<{ questions: string[]; source: AiSource }> {
   const count = opts.count ?? 10;
 
-  if (getClient()) {
+  if (hasAi()) {
     try {
       const system = `You play the real person who would be asking questions in the situation the user describes: for a law school admissions interview, an admissions officer or faculty interviewer; for a job interview, the hiring manager for that role; for a scholarship panel, the panel; and so on. Ask what that person would genuinely ask, in their voice.`;
       const prompt = `Situation (purpose): ${opts.purpose || "general interview practice"}
@@ -190,7 +241,7 @@ const analysisReplySchema = z.object({
 
 /** Grades a spoken answer. Falls back to the built-in rules-based grader. */
 export async function analyzeSpeech(input: AnalyzeInput): Promise<Analysis> {
-  if (getClient()) {
+  if (hasAi()) {
     try {
       const stats = measureTranscript(input.transcript, input.durationSec);
       const system = `You are an expert speaking coach and interviewer. You grade one spoken answer to an interview-style question and give brief, specific, honest feedback addressed to the speaker as "you". You cannot hear the audio: judge vocal delivery only from the voice measurements provided, and say so if they are missing. The transcript comes from browser speech recognition, so ignore missing punctuation and obvious mis-transcribed words.`;

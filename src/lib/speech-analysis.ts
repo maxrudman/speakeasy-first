@@ -4,7 +4,7 @@ import type { AnalyzeInput, DeliveryMetrics, Difficulty } from "./validation";
 /**
  * Speech analysis shared by the server (grading) and the browser (types).
  * The AI grader lives in ai.ts; this file holds the rubric, the transcript
- * measurements, and a built-in grader used when the Claude API isn't available.
+ * measurements, and a built-in grader used when no AI provider is available.
  */
 
 export const CATEGORIES = [
@@ -177,7 +177,7 @@ export function describeDelivery(stats: SpeechStats, delivery: DeliveryMetrics |
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 
 /**
- * A rules-based grader used when the Claude API isn't configured or fails.
+ * A rules-based grader used when no AI key is configured or the request fails.
  * It can't understand meaning the way the AI grader can, so it leans on
  * measurable signals: length, fillers, informal words, structure cues,
  * overlap with the question, and the voice measurements.

@@ -183,7 +183,7 @@ function AnalysisResult({ analysis: a, onRetry, loading }: { analysis: Analysis;
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
         <span>
           {a.source === "builtin"
-            ? "Basic feedback from the built-in grader. Add an Anthropic API key for full AI feedback."
+            ? "Basic feedback from the built-in grader. Add a free Groq API key (see README) for full AI feedback."
             : "Vocal delivery is judged from pace, pauses, pitch and volume measured on your device, not the audio itself."}
         </span>
         <Button variant="ghost" size="sm" onClick={onRetry} loading={loading}>

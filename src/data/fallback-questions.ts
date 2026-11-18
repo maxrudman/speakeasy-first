@@ -1,5 +1,5 @@
 /**
- * Built-in practice questions used when the Claude API isn't configured or a request fails.
+ * Built-in practice questions used when no AI key is configured or a request fails.
  * {role} is replaced with what the user typed in "Role / subject" (or "this role").
  */
 export const FALLBACK_QUESTION_TEMPLATES: string[] = [
