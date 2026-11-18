@@ -22,3 +22,33 @@ Lint, type-check and build were already clean; every bug below was found by clic
 
 **Health check**
 - `GET /api/health` checks the database and each AI and transcription provider that has a key (Anthropic, OpenAI, Deepgram, AssemblyAI) with a cheap authenticated request and short timeouts. Providers without a key show `not_configured`. Results are cached for 60 seconds and include no user data. It returns 503 only when the database is down.
+
+## Stage 1: transcription that works for every voice
+
+**Cascade** (falls through automatically; any tier without a key is skipped)
+1. **Browser live captions**, auto-restarted when they pause (capped so errors can't spin).
+2. **OpenAI Whisper** on the server (`OPENAI_API_KEY`). It runs when the browser has no captions or they fell behind the speech (fewer than about 0.8 words per spoken second).
+3. **Deepgram**, then **AssemblyAI** (`DEEPGRAM_API_KEY`, `ASSEMBLYAI_API_KEY`).
+4. **Manual:** "We couldn't transcribe this one. Type or paste your answer."
+
+Each server tier gets a timeout and one retry with backoff, and a circuit breaker skips a provider that keeps failing. The browser also retries the upload once.
+
+**Recording**
+- Picks a supported format by feature detection: WebM/Opus or Ogg/Opus in Chrome, Edge and Firefox; MP4/AAC in Safari. Records at 32 kbps so 5 minutes is about 1.2 MB, under Vercel's 4.5 MB body limit.
+- Requests echo cancellation, noise suppression, auto gain and mono, and falls back to plain audio on devices that reject them.
+- Live input-level meter, plus "You sound quiet. Move closer…" after 3 seconds of soft input.
+- Silent or empty takes get "We didn't hear anything…". Takes under 1 second get a tip. Recording stops at 5 minutes with a notice, and the upload limit is 4 MB.
+- Low-confidence words (from Whisper segments, Deepgram, AssemblyAI or the browser) show as chips. Tapping one selects it in the transcript to fix.
+- "Not right? Transcribe again" re-sends the in-memory take to the server tiers.
+
+**Privacy**
+- Audio is sent as multipart form data and held in memory for that request only. It is never written to disk, the database or logs. Deepgram is asked to opt out of model improvement, and AssemblyAI transcripts are deleted right after.
+
+**Server**
+- `POST /api/transcribe` (login required, 30 per user per 10 minutes) and `GET /api/transcribe` (is server transcription available?).
+- New `rate_limits` table (migration `0001_rate_limits`) used by a shared Postgres rate limiter. It fails open if the table is unavailable.
+- New helpers in `src/lib/resilience.ts`: timeouts, retry with exponential backoff and jitter, and a circuit breaker. Stage 2 reuses them.
+
+**New env vars** (all optional): `OPENAI_API_KEY`, `OPENAI_TRANSCRIBE_MODEL`, `DEEPGRAM_API_KEY`, `DEEPGRAM_MODEL`, `ASSEMBLYAI_API_KEY`, `SPEAKEASY_MOCK_TRANSCRIPTION` (tests only).
+
+**Tested** in Chromium with a fake microphone: a tone goes through the server tier (mock) and shows a low-confidence chip; a silent file shows the no-speech message; a soft tone shows the "too quiet" tip; with no keys you get the manual message. The 30th upload in a window returns 429. Uploads over 4 MB and non-audio files are rejected with plain messages.
