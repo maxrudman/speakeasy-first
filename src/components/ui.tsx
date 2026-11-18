@@ -6,11 +6,12 @@ import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } f
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
+/** Deck-style buttons: primary is a yellow "sticker" with an indigo outline and hard shadow. */
 const buttonStyles: Record<ButtonVariant, string> = {
-  primary: "bg-pine text-white hover:bg-pine-strong dark:text-paper",
-  secondary: "bg-surface text-ink border border-line hover:border-muted",
-  ghost: "text-muted hover:text-ink hover:bg-line/40",
-  danger: "bg-coral text-white hover:opacity-90 dark:text-paper",
+  primary: "btn-pop bg-sun text-[#221a4d] font-semibold",
+  secondary: "btn-pop bg-surface text-ink font-semibold",
+  ghost: "text-muted hover:text-ink hover:bg-lilac-soft",
+  danger: "btn-pop bg-coral text-white font-semibold dark:text-paper",
 };
 
 export function Button({
@@ -26,12 +27,12 @@ export function Button({
   size?: "sm" | "md";
   loading?: boolean;
 }) {
-  const sizing = size === "sm" ? "h-8 px-3 text-sm" : "h-10 px-4 text-[15px]";
+  const sizing = size === "sm" ? "h-9 px-3.5 text-sm" : "h-11 px-5 text-[15px]";
   return (
     <button
       type="button"
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${sizing} ${buttonStyles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${sizing} ${buttonStyles[variant]} ${className}`}
       {...props}
     >
       {loading && <Spinner className="size-4" />}
@@ -43,7 +44,7 @@ export function Button({
 /* --------------------------------- Form fields -------------------------------- */
 
 const inputBase =
-  "w-full rounded-lg border border-line bg-surface px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20";
+  "w-full rounded-xl border-2 border-line bg-surface px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 focus:border-edge focus:outline-none focus:ring-4 focus:ring-sun/50";
 
 export function TextField({
   label,
@@ -118,7 +119,7 @@ export function Spinner({ className = "size-5" }: { className?: string }) {
 
 export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div role="alert" className="flex items-start justify-between gap-3 rounded-lg bg-coral-soft px-3 py-2.5 text-sm text-coral">
+    <div role="alert" className="flex items-start justify-between gap-3 rounded-xl border-2 border-coral/40 bg-coral-soft px-3 py-2.5 text-sm text-coral">
       <span>{message}</span>
       {onRetry && (
         <button type="button" onClick={onRetry} className="shrink-0 font-medium underline underline-offset-2">
@@ -130,7 +131,7 @@ export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () 
 }
 
 export function Notice({ children }: { children: ReactNode }) {
-  return <p className="rounded-lg bg-pine-soft px-3 py-2 text-sm text-pine-strong">{children}</p>;
+  return <p className="rounded-xl border-2 border-pine/30 bg-pine-soft px-3 py-2 text-sm text-pine-strong">{children}</p>;
 }
 
 /* ----------------------------------- Dialog ----------------------------------- */
@@ -167,11 +168,11 @@ export function Dialog({
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
-      className={`m-auto w-[min(92vw,28rem)] rounded-2xl border border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-ink/30 ${className}`}
+      className={`card-pop m-auto w-[min(92vw,28rem)] rounded-2xl bg-surface p-0 text-ink backdrop:bg-indigo/50 backdrop:backdrop-blur-sm ${className}`}
     >
       {open && (
         <div className="p-6">
-          <h2 id={titleId} className="font-display text-xl font-semibold">
+          <h2 id={titleId} className="font-display text-xl font-bold">
             {title}
           </h2>
           <div className="mt-3">{children}</div>
@@ -215,12 +216,28 @@ export function ConfirmDialog({
 
 /* ------------------------------------ Page ------------------------------------ */
 
-export function PageHeader({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+export function PageHeader({
+  title,
+  description,
+  action,
+  eyebrow,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  /** Small yellow pill above the title, like the deck's section labels. */
+  eyebrow?: string;
+}) {
   return (
     <header className="mb-8 flex items-start justify-between gap-4">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-[2.25rem]">{title}</h1>
-        {description && <p className="mt-1.5 max-w-prose text-[15px] text-muted">{description}</p>}
+        {eyebrow && (
+          <p className="mb-3 inline-block rounded-full bg-sun px-3 py-1 text-xs font-bold tracking-[0.12em] text-[#221a4d] uppercase">
+            {eyebrow}
+          </p>
+        )}
+        <h1 className="font-display text-[2.1rem] leading-[1.05] font-extrabold tracking-tight sm:text-[2.75rem]">{title}</h1>
+        {description && <p className="mt-2.5 max-w-prose text-[15px] text-muted sm:text-base">{description}</p>}
       </div>
       {action}
     </header>

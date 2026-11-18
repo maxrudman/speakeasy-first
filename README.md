@@ -1,9 +1,10 @@
-# Speak Ready
+# SpeakEasy
 
 A web app for building vocabulary and practicing spoken answers.
 
 - **Vocabulary**: flashcards tailored to your level, field, and audience, with spaced repetition. Terms you keep getting right are retired and replaced with new ones.
 - **Practice**: describe your audience and pick a difficulty (Easy, Medium, Hard), get questions written for that exact setting, record your answer, play it back, copy the transcript, and get a graded analysis of your answer and delivery.
+- **Pitch Room**: an elevator pitch game. Pick a one-on-one interview, a panel, an actual elevator or a conference stage, beat the clock, and watch a cartoon audience react live to your pitch. You get a score out of 100, a grade and quick tips, plus a best score and daily streak.
 - **Journal**: save your best answers. Includes a bank of about 100 common questions.
 - **Account**: username and password login. Every user's data is private to them.
 
@@ -16,8 +17,8 @@ Built with Next.js 16, TypeScript, Tailwind CSS, Drizzle ORM, and Postgres. Depl
 You need [Node.js 20+](https://nodejs.org) and [Git](https://git-scm.com).
 
 ```bash
-git clone https://github.com/<your-org>/speak-ready.git
-cd speak-ready
+git clone https://github.com/maxrudman/speakeasy-first.git
+cd speakeasy-first
 npm install
 cp .env.example .env.local
 ```
@@ -55,7 +56,7 @@ To give teammates access to the Vercel project, add them under **Team Settings â
 
 ```bash
 # Create an empty repo on github.com first (no README, no .gitignore), then:
-git remote add origin https://github.com/<your-org>/speak-ready.git
+git remote add origin https://github.com/maxrudman/speakeasy-first.git
 git push -u origin main
 ```
 
@@ -82,13 +83,17 @@ src/
     (auth)/login, signup        Login and sign-up pages (public)
     (app)/vocabulary            Page 1: Vocabulary
     (app)/practice              Page 2: Practice
-    (app)/journal               Page 3: Journal
-    (app)/account               Page 4: Account
+    (app)/pitch                 Page 3: Pitch Room (elevator pitch game)
+    (app)/journal               Page 4: Journal
+    (app)/account               Page 5: Account
     api/                        Server routes the pages call
   components/
-    vocabulary/ practice/ journal/ account/   UI for each page
+    vocabulary/ practice/ pitch/ journal/ account/   UI for each page
+    pitch/scenes.ts             Pitch Room settings, prompts and audience seats
+    pitch/audience.tsx          Cartoon audience and backdrops (one SVG per scene)
     ui.tsx                      Shared buttons, inputs, dialogs
     app-shell.tsx               Navigation (add new pages here)
+    logo.tsx, deck-shapes.tsx   SpeakEasy logo and the class deck's decorative shapes
   data/
     fallback-terms.ts           Built-in vocabulary (used without an API key)
     fallback-questions.ts       Built-in practice questions
@@ -97,6 +102,7 @@ src/
   lib/
     ai.ts                       All AI calls (Claude or Groq), with fallbacks
     vocab-rules.ts              Spaced repetition rules (tweak the numbers here)
+    pitch.ts                    Pitch Room scoring: parts, filler words, pace, live mood
     auth.ts, session.ts         Login sessions
   proxy.ts                      Redirects logged-out visitors to /login
 drizzle/                        Database migrations (commit these)

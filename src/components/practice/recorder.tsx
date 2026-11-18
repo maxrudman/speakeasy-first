@@ -72,7 +72,7 @@ export function Recorder({
           onClick={recording ? stop : onRecord}
           aria-pressed={recording}
           aria-label={recording ? "Stop recording" : state === "recorded" ? "Record again" : "Start recording"}
-          className={`grid size-20 place-items-center rounded-full text-white transition ${
+          className={`grid size-20 place-items-center rounded-full border-2 border-edge text-white shadow-[4px_4px_0_0_var(--edge)] transition ${
             recording ? "recording-pulse bg-coral" : "bg-pine hover:bg-pine-strong dark:text-paper"
           }`}
         >
