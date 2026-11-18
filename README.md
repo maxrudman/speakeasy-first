@@ -44,7 +44,7 @@ npm run dev          # http://localhost:3000
 2. Go to [vercel.com/new](https://vercel.com/new) and import the repo. Leave the framework settings as they are.
 3. Add a database: in the Vercel project go to **Storage → Create → Neon (Postgres)** and connect it to the project. This sets `DATABASE_URL` for you.
 4. In **Settings → Environment Variables**, add `SESSION_SECRET` (a new random value, not the one from your laptop) and, if you have one, `ANTHROPIC_API_KEY`.
-5. Deploy. Database migrations run automatically before each build (the `vercel-build` script).
+5. Deploy. Database tables are created and updated automatically during each Vercel build (see `scripts/migrate.ts`).
 
 After that, every push to `main` deploys to production, and every pull request gets its own preview URL that teammates can click and test.
 
