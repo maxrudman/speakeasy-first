@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { DeliveryMetrics } from "@/lib/validation";
+import { startVoiceMeter, type VoiceMeter } from "./voice-meter";
 
 /**
  * Records audio with MediaRecorder and transcribes it live with the browser's
@@ -39,6 +41,8 @@ export function useRecorder() {
   const [interimText, setInterimText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [transcriptionSupported, setTranscriptionSupported] = useState(true);
+  const [delivery, setDelivery] = useState<DeliveryMetrics | null>(null);
+  const [durationSec, setDurationSec] = useState(0);
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const recognition = useRef<SpeechRecognitionLike | null>(null);
@@ -47,6 +51,8 @@ export function useRecorder() {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const isRecording = useRef(false);
   const urlRef = useRef<string | null>(null);
+  const meter = useRef<VoiceMeter | null>(null);
+  const startedAt = useRef(0);
   // Set by reset(): the take being stopped was deleted, so don't turn it into playable audio.
   const discardTake = useRef(false);
   // Guards against a tight restart loop when recognition keeps erroring.
@@ -97,8 +103,16 @@ export function useRecorder() {
     setFinalText("");
     setInterimText("");
     setSeconds(0);
+    setDelivery(null);
+    setDurationSec(0);
     chunks.current = [];
     stream.current = media;
+    try {
+      meter.current = startVoiceMeter(media);
+    } catch {
+      meter.current = null;
+    }
+    startedAt.current = Date.now();
 
     const recorder = new MediaRecorder(media);
     recorder.ondataavailable = (e) => {
@@ -176,6 +190,15 @@ export function useRecorder() {
   }, [cleanupStream, releaseAudio]);
 
   const stop = useCallback(() => {
+    if (isRecording.current) {
+      setDurationSec(Math.round((Date.now() - startedAt.current) / 100) / 10);
+      try {
+        setDelivery(meter.current?.stop() ?? null);
+      } catch {
+        setDelivery(null);
+      }
+      meter.current = null;
+    }
     isRecording.current = false;
     recognition.current?.stop();
     recognition.current = null;
@@ -193,6 +216,8 @@ export function useRecorder() {
     setFinalText("");
     setInterimText("");
     setSeconds(0);
+    setDelivery(null);
+    setDurationSec(0);
     setState("idle");
   }, [releaseAudio, stop]);
 
@@ -200,6 +225,11 @@ export function useRecorder() {
   useEffect(() => {
     return () => {
       isRecording.current = false;
+      try {
+        meter.current?.stop();
+      } catch {
+        /* already stopped */
+      }
       recognition.current?.stop();
       if (mediaRecorder.current?.state === "recording") mediaRecorder.current.stop();
       stream.current?.getTracks().forEach((t) => t.stop());
@@ -217,6 +247,8 @@ export function useRecorder() {
     interimText,
     error,
     transcriptionSupported,
+    delivery,
+    durationSec,
     start,
     stop,
     reset,

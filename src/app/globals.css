@@ -3,37 +3,59 @@
 @import "@fontsource-variable/public-sans";
 
 /*
- * Design tokens. Change colors here and the whole app follows.
- *  paper   – page background        surface – cards and panels
- *  ink     – main text              muted   – secondary text
- *  line    – borders                pine    – primary actions, "got it right"
+ * Design tokens: the SpeakEasy class-deck palette. Change colors here and the whole app follows.
+ *  paper   – page background (cream)     surface – cards and panels
+ *  ink     – main text (deep indigo)     muted   – secondary text
+ *  line    – soft borders                edge    – the thick "sticker" outline and offset shadow
+ *  pine    – primary actions, "got it right" (deck teal, darkened for contrast)
  *  coral   – "got it wrong", destructive actions
+ *  indigo / sun / lilac / pop-coral / pop-teal – deck accent colors for shapes and section colors
+ *  *-soft  – pastel card fills (peach, mint, butter, lavender like the deck's cards)
  */
 :root {
-  --paper: #f3f5f7;
-  --surface: #ffffff;
-  --ink: #18212f;
-  --muted: #5b6676;
-  --line: #dce1e7;
-  --pine: #2e6b57;
-  --pine-strong: #235444;
-  --pine-soft: #e2eee9;
-  --coral: #b4504a;
-  --coral-soft: #f6e5e2;
+  --paper: #fff5e9;
+  --surface: #fffdf9;
+  --ink: #221a4d;
+  --muted: #5f5880;
+  --line: #e9dcc9;
+  --edge: #221a4d;
+  --pine: #0e7a6e;
+  --pine-strong: #0a5f56;
+  --pine-soft: #d4f2ec;
+  --coral: #b53a22;
+  --coral-soft: #ffe6dc;
+  --indigo: #2a1f5c;
+  --indigo-deep: #1f1747;
+  --sun: #ffc83d;
+  --sun-soft: #fff0c2;
+  --lilac: #c9b8ff;
+  --lilac-soft: #ece5ff;
+  --pop-coral: #ff7a59;
+  --pop-teal: #1aa89a;
+  /* Chart marks (≥3:1 contrast on the surface). */
+  --chart: #0e7a6e;
 }
 
+/* Dark theme: the deck's indigo title slides, following the system setting. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #12161c;
-    --surface: #1a2029;
-    --ink: #e7ebf0;
-    --muted: #9aa4b2;
-    --line: #2b333e;
-    --pine: #5fb394;
-    --pine-strong: #7cc6aa;
-    --pine-soft: #1d3029;
-    --coral: #e07b70;
-    --coral-soft: #3a2220;
+    color-scheme: dark;
+    --paper: #17112f;
+    --surface: #221a47;
+    --ink: #fff5e9;
+    --muted: #b8b0d6;
+    --line: #3a3066;
+    --edge: #0b0720;
+    --pine: #4fd1be;
+    --pine-strong: #7fe0d1;
+    --pine-soft: #173c3d;
+    --coral: #ff8e72;
+    --coral-soft: #4a2233;
+    --indigo: #2a1f5c;
+    --indigo-deep: #120d2a;
+    --sun-soft: #3e3418;
+    --lilac-soft: #2f2760;
+    --chart: #4fd1be;
   }
 }
 
@@ -43,13 +65,27 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-edge: var(--edge);
   --color-pine: var(--pine);
   --color-pine-strong: var(--pine-strong);
   --color-pine-soft: var(--pine-soft);
   --color-coral: var(--coral);
   --color-coral-soft: var(--coral-soft);
+  --color-indigo: var(--indigo);
+  --color-indigo-deep: var(--indigo-deep);
+  --color-sun: var(--sun);
+  --color-sun-soft: var(--sun-soft);
+  --color-lilac: var(--lilac);
+  --color-lilac-soft: var(--lilac-soft);
+  --color-pop-coral: var(--pop-coral);
+  --color-pop-teal: var(--pop-teal);
+  --color-chart: var(--chart);
   --font-sans: "Public Sans Variable", system-ui, sans-serif;
   --font-display: "Bricolage Grotesque Variable", "Public Sans Variable", system-ui, sans-serif;
+  /* The deck's "sticker" shadow: a hard offset, no blur. */
+  --shadow-pop: 4px 4px 0 0 var(--edge);
+  --shadow-pop-sm: 2px 2px 0 0 var(--edge);
+  --shadow-pop-lg: 6px 6px 0 0 var(--edge);
 }
 
 body {
@@ -59,12 +95,55 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--pine);
+  outline: 3px solid var(--pine);
   outline-offset: 2px;
+}
+/* On the indigo navigation, a yellow ring stays visible. */
+.on-indigo :focus-visible {
+  outline-color: var(--sun);
 }
 
 ::selection {
-  background: var(--pine-soft);
+  background: var(--sun);
+  color: #221a4d;
+}
+
+/*
+ * Sticker cards, like the deck's pastel boxes: thick outline + hard offset shadow.
+ * Every existing panel built as "rounded-2xl border border-line bg-surface" gets the
+ * look automatically, so pages don't need editing. New code can use .card-pop directly.
+ */
+.card-pop,
+main .rounded-2xl.border.border-line.bg-surface {
+  border: 2px solid var(--edge);
+  box-shadow: var(--shadow-pop);
+}
+
+/* Chunky buttons press down into their shadow. */
+.btn-pop {
+  border: 2px solid var(--edge);
+  box-shadow: var(--shadow-pop-sm);
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 150ms;
+}
+.btn-pop:enabled:hover,
+a.btn-pop:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 0 var(--edge);
+}
+.btn-pop:enabled:active,
+a.btn-pop:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 0 var(--edge);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-pop,
+  .btn-pop:enabled:hover,
+  .btn-pop:enabled:active,
+  a.btn-pop:hover,
+  a.btn-pop:active {
+    transform: none;
+    transition: none;
+  }
 }
 
 /* Flashcard flip. Respects reduced-motion settings. */
@@ -86,4 +165,121 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .recording-pulse { animation: none; }
+}
+
+/* Pages fade in when you switch sections. */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.page-in {
+  animation: page-in 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-in { animation: none; }
+}
+
+/* Deck shapes drift gently. */
+@keyframes deck-float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(0, -8px); }
+}
+.deck-float-a { animation: deck-float 7s ease-in-out infinite; }
+.deck-float-b { animation: deck-float 5.5s ease-in-out -2s infinite; }
+.deck-float-c { animation: deck-float 6.5s ease-in-out -4s infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .deck-float-a, .deck-float-b, .deck-float-c { animation: none; }
+}
+
+/* ------------------------------ Pitch Room audience ------------------------------ */
+.person {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+@keyframes pr-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1.5px); } }
+@keyframes pr-nod { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(2.5deg) translateY(2px); } 60% { transform: rotate(-1deg); } }
+@keyframes pr-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes pr-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes pr-slump { 0%, 100% { transform: rotate(-5deg) translateY(4px); } 50% { transform: rotate(-7deg) translateY(6px); } }
+.pr-neutral { animation: pr-breathe 4s ease-in-out infinite; }
+.pr-engaged { animation: pr-nod 1.8s ease-in-out infinite; }
+.pr-cheering { animation: pr-bounce 0.55s ease-in-out infinite; }
+.pr-restless { animation: pr-sway 2.6s ease-in-out infinite; }
+.pr-bored { animation: pr-slump 3.4s ease-in-out infinite; }
+
+.pitch-wave { transform-box: fill-box; transform-origin: 50% 100%; animation: pr-sway 0.5s ease-in-out infinite; }
+
+@keyframes pitch-pop {
+  0% { transform: translateY(10px) scale(0.4); opacity: 0; }
+  15% { transform: translateY(0) scale(1.08); opacity: 1; }
+  25% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { transform: translateY(-26px) scale(0.95); opacity: 0; }
+}
+.pitch-pop { transform-box: fill-box; transform-origin: center; animation: pitch-pop 1.9s ease-out forwards; }
+
+@keyframes pitch-zzz { 0% { transform: translate(0, 0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(10px, -18px); opacity: 0; } }
+.pitch-zzz { animation: pitch-zzz 2.2s ease-out infinite; }
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-20px) rotate(0); opacity: 1; }
+  100% { transform: translateY(420px) rotate(540deg); opacity: 0; }
+}
+.confetti-piece { animation: confetti-fall 2.4s ease-in forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-neutral, .pr-engaged, .pr-cheering, .pr-restless, .pr-bored, .pitch-wave, .pitch-zzz, .pitch-pop { animation: none; }
+  .confetti-piece { display: none; }
+}
+
+/* ------------------------------ Wow layer ------------------------------ */
+
+/* Celebration card (level up, badges, daily challenge). */
+@keyframes celebrate-in {
+  0% { opacity: 0; transform: translateY(-16px) scale(0.92) rotate(-2deg); }
+  60% { opacity: 1; transform: translateY(2px) scale(1.02) rotate(0.5deg); }
+  100% { transform: none; }
+}
+.celebrate-in { animation: celebrate-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+
+/* Live transcript highlights: new words flash in. */
+@keyframes hl-flash {
+  0% { transform: scale(1.18); filter: brightness(1.15); }
+  100% { transform: none; filter: none; }
+}
+.hl {
+  display: inline-block;
+  border-radius: 0.4rem;
+  padding: 0 0.2rem;
+  margin: 0 0.02rem;
+  font-weight: 650;
+  animation: hl-flash 450ms ease-out;
+}
+.hl-filler { background: #ffd9cc; color: #8f2a14; box-shadow: inset 0 -2px 0 #ff7a59; }
+.hl-hedge { background: #ece5ff; color: #3d2f84; box-shadow: inset 0 -2px 0 #9b87f5; }
+.hl-strong { background: #c8f0e8; color: #075249; box-shadow: inset 0 -2px 0 #1aa89a, 0 0 14px rgb(26 168 154 / 0.35); }
+
+/* The interviewer's mouth while they speak. */
+@keyframes talk {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+.pr-talk-mouth { transform-box: fill-box; transform-origin: center; animation: talk 0.22s ease-in-out infinite; }
+
+/* Landing page: big floating shapes and a marquee. */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  50% { transform: translate(10px, -14px) rotate(4deg); }
+}
+.drift { animation: drift 9s ease-in-out infinite; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.marquee { animation: marquee 28s linear infinite; }
+@keyframes typing-caret { 50% { opacity: 0; } }
+.caret { animation: typing-caret 1s steps(1) infinite; }
+
+/* Teleprompter: the current line glows. */
+.prompter-line { transition: opacity 250ms, transform 250ms, color 250ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .celebrate-in, .hl, .pr-talk-mouth, .drift, .marquee, .caret { animation: none; }
 }

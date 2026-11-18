@@ -54,8 +54,15 @@ export async function api<T>(
     }
     throw new ApiError(data?.error ?? friendlyStatus(res.status), res.status);
   }
+  // Lets the game layer (XP, badges, daily challenges) notice progress without touching each page.
+  if (typeof window !== "undefined" && options.method && options.method !== "GET") {
+    window.dispatchEvent(new CustomEvent(API_ACTIVITY_EVENT, { detail: { url, method: options.method } }));
+  }
   return data as T;
 }
+
+/** Fired on window after every successful write request: detail is { url, method }. */
+export const API_ACTIVITY_EVENT = "se-api-activity";
 
 /** Plain-language text for responses that didn't include our own error message. */
 function friendlyStatus(status: number) {

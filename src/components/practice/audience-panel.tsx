@@ -2,8 +2,17 @@
 
 import { useState } from "react";
 import { Button, TextArea, TextField } from "@/components/ui";
+import { DIFFICULTIES, type Difficulty } from "@/lib/validation";
 
-export type Audience = { purpose: string; role: string; specifications: string };
+export type Audience = { purpose: string; role: string; specifications: string; difficulty: Difficulty };
+
+export const EMPTY_AUDIENCE: Audience = { purpose: "", role: "", specifications: "", difficulty: "medium" };
+
+export const DIFFICULTY_INFO: Record<Difficulty, { label: string; hint: string }> = {
+  easy: { label: "Easy", hint: "Friendly, predictable questions and encouraging grading." },
+  medium: { label: "Medium", hint: "Realistic questions and fair grading for this setting." },
+  hard: { label: "Hard", hint: "Tough, probing questions and strict grading." },
+};
 
 /**
  * Collapsed: a single "Who is your audience?" button (or a summary once set).
@@ -21,16 +30,19 @@ export function AudiencePanel({
   onGenerate: (a: Audience) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<Audience>(audience ?? { purpose: "", role: "", specifications: "" });
+  const [draft, setDraft] = useState<Audience>(audience ?? EMPTY_AUDIENCE);
   const canGenerate = Boolean(draft.purpose.trim() || draft.role.trim());
 
   if (!open) {
-    const summary = audience && [audience.purpose, audience.role].filter(Boolean).join(", ");
+    const summary =
+      audience &&
+      [audience.purpose, audience.role].filter(Boolean).join(", ") +
+        ` · ${DIFFICULTY_INFO[audience.difficulty].label}`;
     return (
       <button
         type="button"
         onClick={() => {
-          setDraft(audience ?? { purpose: "", role: "", specifications: "" });
+          setDraft(audience ?? EMPTY_AUDIENCE);
           setOpen(true);
         }}
         aria-expanded={false}
@@ -55,6 +67,7 @@ export function AudiencePanel({
           purpose: draft.purpose.trim(),
           role: draft.role.trim(),
           specifications: draft.specifications.trim(),
+          difficulty: draft.difficulty,
         });
         setOpen(false);
       }}
@@ -62,7 +75,7 @@ export function AudiencePanel({
       <h2 className="font-display text-lg font-semibold">Who is your audience?</h2>
       <TextField
         label="Purpose"
-        placeholder="Job interview for a college senior"
+        placeholder="Law school admissions interview"
         value={draft.purpose}
         onChange={(e) => setDraft({ ...draft, purpose: e.target.value })}
         maxLength={300}
@@ -70,20 +83,43 @@ export function AudiencePanel({
       />
       <TextField
         label="Role or subject"
-        placeholder="Paralegal at a corporate firm"
+        placeholder="Applicant to a top-20 JD program"
         value={draft.role}
         onChange={(e) => setDraft({ ...draft, role: e.target.value })}
         maxLength={300}
       />
       <TextArea
         label="Specifications"
-        placeholder="Medium difficulty; focus on how my background is relevant to the job"
+        placeholder="I majored in economics and worked two years as a paralegal"
         value={draft.specifications}
         onChange={(e) => setDraft({ ...draft, specifications: e.target.value })}
         maxLength={500}
         rows={2}
-        hint="Optional. Difficulty, topics to focus on, or anything else."
+        hint="Optional. Your background, topics to focus on, or anything else."
       />
+      <fieldset>
+        <legend className="text-sm font-medium">Difficulty</legend>
+        <div role="radiogroup" aria-label="Difficulty" className="mt-1.5 grid grid-cols-3 gap-1 rounded-xl border border-line bg-paper p-1">
+          {DIFFICULTIES.map((d) => {
+            const selected = draft.difficulty === d;
+            return (
+              <button
+                key={d}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setDraft({ ...draft, difficulty: d })}
+                className={`rounded-lg px-3 py-2 text-[15px] font-medium transition ${
+                  selected ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink"
+                }`}
+              >
+                {DIFFICULTY_INFO[d].label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-1.5 text-xs text-muted">{DIFFICULTY_INFO[draft.difficulty].hint}</p>
+      </fieldset>
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={() => setOpen(false)}>
           Cancel

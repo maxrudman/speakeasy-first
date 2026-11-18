@@ -33,14 +33,53 @@ export const reviewSchema = z.object({
   correct: z.boolean(),
 });
 
+export const DIFFICULTIES = ["easy", "medium", "hard"] as const;
+export type Difficulty = (typeof DIFFICULTIES)[number];
+
 export const audienceSchema = z.object({
   purpose: z.string().trim().max(300).default(""),
   role: z.string().trim().max(300).default(""),
   specifications: z.string().trim().max(500).default(""),
+  difficulty: z.enum(DIFFICULTIES).default("medium"),
   exclude: z.array(z.string().max(500)).max(200).default([]),
 });
+
+/** Voice measurements taken in the browser while recording (no audio is uploaded). */
+export const deliverySchema = z.object({
+  /** Share of the recording spent speaking rather than silent, 0–1. */
+  speakingRatio: z.number().min(0).max(1),
+  /** Silences longer than 2 seconds while the answer was under way. */
+  longPauses: z.number().int().min(0).max(1000),
+  longestPauseSec: z.number().min(0).max(3600),
+  /** Standard deviation of pitch in semitones. Under ~2 sounds flat; 3–6 sounds lively. */
+  pitchVariation: z.number().min(0).max(48).nullable(),
+  /** Coefficient of variation of loudness while speaking. */
+  volumeVariation: z.number().min(0).max(10).nullable(),
+});
+export type DeliveryMetrics = z.infer<typeof deliverySchema>;
+
+export const analyzeSchema = z.object({
+  question: z.string().trim().max(1000).default(""),
+  transcript: z.string().trim().min(1, "is required").max(20000),
+  durationSec: z.number().min(0).max(3600),
+  delivery: deliverySchema.nullable().default(null),
+  purpose: z.string().trim().max(300).default(""),
+  role: z.string().trim().max(300).default(""),
+  specifications: z.string().trim().max(500).default(""),
+  difficulty: z.enum(DIFFICULTIES).default("medium"),
+});
+export type AnalyzeInput = z.infer<typeof analyzeSchema>;
 
 export const journalEntrySchema = z.object({
   prompt: z.string().trim().min(1, "is required").max(1000),
   response: z.string().trim().min(1, "is required").max(20000),
 });
+
+export const pitchRewriteSchema = z.object({
+  pitch: z.string().trim().min(1, "is required").max(4000),
+  scene: z.string().trim().max(60).default(""),
+  prompt: z.string().trim().max(200).default(""),
+  goal: z.string().trim().max(120).default(""),
+  seconds: z.number().int().min(15).max(120).default(60),
+});
+export type PitchRewriteInput = z.infer<typeof pitchRewriteSchema>;

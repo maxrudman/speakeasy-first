@@ -25,7 +25,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setLoading(true);
     try {
       await api(`/api/auth/${mode}`, { method: "POST", body: { username, password } });
-      router.replace("/vocabulary");
+      // New accounts start with vocabulary setup; returning users land on Home.
+      router.replace(isSignup ? "/vocabulary" : "/home");
       router.refresh();
     } catch (err) {
       setError((err as Error).message);

@@ -44,6 +44,14 @@ function probe(id: ProviderId, key: string): Promise<Check> {
           }),
         ),
       );
+    case "groq":
+      return timed(async () =>
+        ok(
+          await fetchWithTimeout(`${process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1"}/models`, {
+            headers: { Authorization: `Bearer ${key}` },
+          }),
+        ),
+      );
     case "openai":
       return timed(async () =>
         ok(await fetchWithTimeout("https://api.openai.com/v1/models", { headers: { Authorization: `Bearer ${key}` } })),

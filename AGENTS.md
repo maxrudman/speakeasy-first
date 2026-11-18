@@ -8,12 +8,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-## Project conventions (Speak Ready)
+## Project conventions (SpeakEasy)
 
 - Stack: Next.js 16 App Router, TypeScript, Tailwind v4, Drizzle ORM on Postgres, deployed on Vercel. `cacheComponents` is intentionally off.
 - Auth: `src/proxy.ts` (Next 16's renamed middleware) redirects logged-out page visits. API routes wrap handlers in `withUser()` from `src/lib/api.ts` and must filter every query by `user.id`.
 - Validate request bodies with zod schemas from `src/lib/validation.ts` via `parseBody()`.
-- All Claude API calls go through `src/lib/ai.ts` and must keep a built-in fallback so the app works without `ANTHROPIC_API_KEY`.
+- All AI calls go through `askForJson()` in `src/lib/ai.ts` (Claude if `ANTHROPIC_API_KEY` is set, otherwise Groq if `GROQ_API_KEY` is set) and must keep a built-in fallback so the app works with no key.
 - Schema changes: edit `src/db/schema.ts`, run `npm run db:generate`, commit the migration in `/drizzle`.
 - UI: reuse `src/components/ui.tsx`; use color tokens from `src/app/globals.css` (paper, surface, ink, muted, line, pine, coral). Pages live in `src/app/(app)/<page>/page.tsx` with their UI in `src/components/<page>/`.
 - Before finishing: `npm run lint && npm run typecheck && npm run build`.

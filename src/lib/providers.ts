@@ -5,10 +5,11 @@ import "server-only";
  * Features turn themselves off when their key is missing, so nothing here is required
  * except DATABASE_URL and SESSION_SECRET.
  */
-export type ProviderId = "anthropic" | "openai" | "deepgram" | "assemblyai";
+export type ProviderId = "anthropic" | "groq" | "openai" | "deepgram" | "assemblyai";
 
 export const PROVIDERS: Record<ProviderId, { label: string; env: string; purpose: string }> = {
   anthropic: { label: "Claude (Anthropic)", env: "ANTHROPIC_API_KEY", purpose: "Vocabulary, questions and coach" },
+  groq: { label: "Groq", env: "GROQ_API_KEY", purpose: "Free backup AI for vocabulary, questions and feedback" },
   openai: { label: "OpenAI", env: "OPENAI_API_KEY", purpose: "Whisper transcription and backup AI" },
   deepgram: { label: "Deepgram", env: "DEEPGRAM_API_KEY", purpose: "Backup transcription" },
   assemblyai: { label: "AssemblyAI", env: "ASSEMBLYAI_API_KEY", purpose: "Backup transcription" },

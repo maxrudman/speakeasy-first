@@ -1,7 +1,7 @@
 import type { VocabLevel } from "@/lib/validation";
 
 /**
- * Built-in vocabulary used when the Claude API isn't configured or a request fails.
+ * Built-in vocabulary used when no AI key is configured or a request fails.
  * Terms are general professional vocabulary, grouped by difficulty.
  * Add more freely — duplicates (case-insensitive) are ignored per user.
  */

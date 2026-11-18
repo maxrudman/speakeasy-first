@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ConfirmDialog, ErrorNote, PageHeader, Spinner } from "@/components/ui";
 import { api } from "@/lib/client-api";
-import { AudiencePanel, type Audience } from "./audience-panel";
+import { AudiencePanel, DIFFICULTY_INFO, EMPTY_AUDIENCE, type Audience } from "./audience-panel";
 import { Recorder } from "./recorder";
 import { useRecorder } from "./use-recorder";
 
@@ -29,8 +29,9 @@ export function PracticeView() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(AUDIENCE_STORAGE_KEY);
+      // Older saves have no difficulty; fill in the default.
       // eslint-disable-next-line react-hooks/set-state-in-effect -- restoring saved input after mount
-      if (saved) setAudience(JSON.parse(saved));
+      if (saved) setAudience({ ...EMPTY_AUDIENCE, ...JSON.parse(saved) });
     } catch {
       /* storage unavailable */
     }
@@ -156,6 +157,7 @@ export function PracticeView() {
           <div className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
             <p className="text-sm text-muted">
               Question {index + 1} of {questions.length}
+              {audience && <> · {DIFFICULTY_INFO[audience.difficulty].label}</>}
             </p>
             <p className="mt-3 font-display text-2xl font-medium leading-snug tracking-tight sm:text-[1.75rem]">{question}</p>
             <div className="mt-6 flex items-center justify-between gap-3">
@@ -176,7 +178,7 @@ export function PracticeView() {
         )}
       </section>
 
-      <Recorder recorder={recorder} question={question} onRecord={requestRecord} />
+      <Recorder recorder={recorder} question={question} audience={audience} onRecord={requestRecord} />
 
       <ConfirmDialog
         open={confirm !== null}
