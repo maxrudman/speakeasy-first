@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGame } from "@/components/game/game-provider";
 import { SoundToggle } from "@/components/sound-toggle";
-import { Button, ErrorNote, Notice, PageHeader, Spinner, TextField } from "@/components/ui";
+import { Button, ErrorNote, Notice, PageHeader, Spinner, StatChip, StepTitle, TextField } from "@/components/ui";
 import { useRecorder } from "@/components/practice/use-recorder";
 import { api } from "@/lib/client-api";
 import { levelFor } from "@/lib/game";
@@ -409,9 +409,9 @@ export function PitchView() {
 
         <div className="flex flex-wrap gap-3">
           {game.ready && (
-            <span className="card-pop inline-flex items-center gap-2 rounded-full bg-lilac-soft px-4 py-2 text-sm font-semibold">
-              <span aria-hidden="true">🚀</span> Level {lvl.level} · {lvl.name} · {lvl.xp} XP
-            </span>
+            <StatChip icon="🚀" tone="lilac">
+              Level {lvl.level} · {lvl.name} · {lvl.xp} XP
+            </StatChip>
           )}
           <StatsStrip streak={streak} best={best[sceneId]} sceneName={scene.name} />
         </div>
@@ -864,26 +864,11 @@ export function PitchView() {
 
 /* ---------------------------------- Pieces ----------------------------------- */
 
-function StepTitle({ n, id, children }: { n: number; id: string; children: React.ReactNode }) {
-  return (
-    <h2 id={id} className="flex items-center gap-3 font-display text-xl font-extrabold">
-      <span aria-hidden="true" className="grid size-8 place-items-center rounded-full border-2 border-edge bg-sun text-base text-[#221a4d]">
-        {n}
-      </span>
-      {children}
-    </h2>
-  );
-}
-
 function StatsStrip({ streak, best, sceneName }: { streak: number; best?: number; sceneName: string }) {
   return (
     <div className="flex flex-wrap gap-3">
-      <span className="card-pop inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm font-semibold">
-        <span aria-hidden="true">🔥</span> {streak > 0 ? `${streak}-day streak` : "Start a streak today"}
-      </span>
-      <span className="card-pop inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm font-semibold">
-        <span aria-hidden="true">🏆</span> {best !== undefined ? `Best in ${sceneName}: ${best}` : `No score yet in ${sceneName}`}
-      </span>
+      <StatChip icon="🔥">{streak > 0 ? `${streak}-day streak` : "Start a streak today"}</StatChip>
+      <StatChip icon="🏆">{best !== undefined ? `Best in ${sceneName}: ${best}` : `No score yet in ${sceneName}`}</StatChip>
     </div>
   );
 }

@@ -109,10 +109,10 @@ function Shell({ username, children }: { username: string; children: ReactNode }
 
       {/* Bottom padding clears the phone tab bar and the iPhone home indicator. */}
       <main
-        className={`mx-auto w-full ${wide ? "max-w-6xl" : "max-w-3xl"} pt-8 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(7rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] sm:px-8 md:pt-12 md:pb-28 lg:px-12`}
+        className={`mx-auto w-full max-w-6xl pt-8 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(7rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] sm:px-8 md:pt-12 md:pb-28 lg:px-12`}
       >
         {/* Re-keyed per route so each page fades in. */}
-        <div key={pathname} className="page-in">
+        <div key={pathname} className={`page-in ${wide ? "" : "max-w-3xl"}`}>
           {children}
         </div>
       </main>

@@ -63,7 +63,7 @@ export function AnalysisPanel({
 
   if (!current || stale) {
     return (
-      <div className="mt-6 border-t border-line pt-6">
+      <div className="mt-6 border-t-2 border-dashed border-line pt-6">
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={analyze} loading={loading} disabled={disabled || !transcript.trim()}>
             {stale ? "Re-analyze edited answer" : "Analyze my answer"}
@@ -92,16 +92,18 @@ export function AnalysisPanel({
   return <AnalysisResult analysis={current.analysis} onRetry={analyze} loading={loading} />;
 }
 
+/** Grade color on the indigo panel, matching Pitch Room's results. */
 function gradeTone(score: number) {
-  if (score >= 80) return "text-pine";
-  if (score >= 70) return "text-ink";
-  return "text-coral";
+  if (score >= 80) return "text-[#4fd1be]";
+  if (score >= 70) return "text-sun";
+  return "text-pop-coral";
 }
 
+/** Same bar colors as Pitch Room's breakdown. */
 function barTone(score: number) {
   if (score >= 80) return "bg-pine";
-  if (score >= 70) return "bg-muted";
-  return "bg-coral";
+  if (score >= 70) return "bg-sun";
+  return "bg-pop-coral";
 }
 
 function pitchLabel(v: number | null) {
@@ -120,40 +122,43 @@ function AnalysisResult({ analysis: a, onRetry, loading }: { analysis: Analysis;
   ].filter(Boolean) as { label: string; value: string }[];
 
   return (
-    <section aria-labelledby="analysis-heading" className="mt-6 border-t border-line pt-6">
-      <div className="flex items-start gap-5">
+    <section aria-labelledby="analysis-heading" className="mt-6 border-t-2 border-dashed border-line pt-6">
+      <div className="flex items-start gap-5 rounded-2xl border-2 border-edge bg-indigo p-5 text-[#fff5e9] sm:p-6">
         <div className="shrink-0 text-center">
-          <p className={`font-display text-6xl font-semibold leading-none tracking-tight ${gradeTone(a.score)}`}>{a.grade}</p>
-          <p className="mt-1.5 text-sm tabular-nums text-muted">{a.score} / 100</p>
+          <p className={`font-display text-6xl leading-none font-extrabold tracking-tight ${gradeTone(a.score)}`}>{a.grade}</p>
+          <p className="mt-2 text-sm text-[#d9d2f5] tabular-nums">{a.score} / 100</p>
         </div>
         <div className="min-w-0">
-          <h3 id="analysis-heading" className="font-display text-lg font-semibold">
+          <p className="inline-block rounded-full bg-sun px-3 py-1 text-xs font-bold tracking-[0.12em] text-[#221a4d] uppercase">
+            {DIFFICULTY_INFO[a.difficulty].label}
+          </p>
+          <h3 id="analysis-heading" className="mt-2 font-display text-xl font-extrabold">
             Your feedback
           </h3>
-          <p className="mt-1 text-[15px] leading-relaxed">{a.summary}</p>
-          <p className="mt-2 text-xs text-muted">Graded on {DIFFICULTY_INFO[a.difficulty].label.toLowerCase()} difficulty.</p>
+          <p className="mt-1 text-[15px] leading-relaxed text-[#e9e4fb]">{a.summary}</p>
         </div>
       </div>
 
       {stats.length > 0 && (
-        <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {stats.map((s) => (
-            <div key={s.label} className="rounded-lg bg-paper px-3 py-2">
-              <dt className="text-xs text-muted">{s.label}</dt>
-              <dd className="mt-0.5 text-[15px] font-medium tabular-nums">{s.value}</dd>
+            <div key={s.label} className="rounded-xl border-2 border-edge bg-paper px-3 py-2.5">
+              <dt className="text-xs font-medium text-muted">{s.label}</dt>
+              <dd className="mt-0.5 font-display text-xl font-extrabold tabular-nums">{s.value}</dd>
             </div>
           ))}
         </dl>
       )}
 
-      <ul className="mt-6 space-y-4">
+      <h4 className="mt-6 font-display text-lg font-extrabold">Breakdown</h4>
+      <ul className="mt-3 space-y-4">
         {a.categories.map((c) => (
           <li key={c.key}>
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-[15px] font-medium">{c.label}</span>
-              <span className="text-sm tabular-nums text-muted">{c.score}</span>
+              <span className="text-[15px] font-semibold">{c.label}</span>
+              <span className="font-display text-sm font-extrabold tabular-nums">{c.score}</span>
             </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
+            <div className="mt-1.5 h-3 overflow-hidden rounded-full border-2 border-edge bg-paper" aria-hidden="true">
               <div className={`h-full rounded-full ${barTone(c.score)}`} style={{ width: `${Math.max(4, c.score)}%` }} />
             </div>
             <p className="mt-1.5 text-sm leading-relaxed text-muted">{c.comment}</p>
@@ -161,22 +166,32 @@ function AnalysisResult({ analysis: a, onRetry, loading }: { analysis: Analysis;
         ))}
       </ul>
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-2">
-        <div>
-          <h4 className="text-sm font-semibold text-pine">What worked</h4>
-          <ul className="mt-2 space-y-2 text-sm leading-relaxed">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border-2 border-edge bg-pine-soft p-4">
+          <h4 className="font-display text-base font-extrabold">What worked</h4>
+          <ul className="mt-2.5 space-y-2.5 text-sm leading-relaxed">
             {a.strengths.map((s) => (
-              <li key={s} className="border-l-2 border-pine/40 pl-3">{s}</li>
+              <li key={s} className="flex gap-2.5">
+                <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full border-2 border-edge bg-surface text-xs font-bold">
+                  ✓
+                </span>
+                {s}
+              </li>
             ))}
           </ul>
         </div>
-        <div>
-          <h4 className="text-sm font-semibold text-coral">Try next time</h4>
-          <ul className="mt-2 space-y-2 text-sm leading-relaxed">
-            {a.improvements.map((s) => (
-              <li key={s} className="border-l-2 border-coral/40 pl-3">{s}</li>
+        <div className="rounded-2xl border-2 border-edge bg-sun-soft p-4">
+          <h4 className="font-display text-base font-extrabold">Try next time</h4>
+          <ol className="mt-2.5 space-y-2.5 text-sm leading-relaxed">
+            {a.improvements.map((s, i) => (
+              <li key={s} className="flex gap-2.5">
+                <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full border-2 border-edge bg-sun text-xs font-bold text-[#221a4d]">
+                  {i + 1}
+                </span>
+                {s}
+              </li>
             ))}
-          </ul>
+          </ol>
         </div>
       </div>
 

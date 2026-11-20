@@ -47,17 +47,17 @@ export function Onboarding({ onDone }: { onDone: (prefs: Preferences) => void })
   }
 
   return (
-    <div className="mx-auto max-w-xl pt-4 sm:pt-10">
-      <div className="mb-10 flex gap-1.5" role="progressbar" aria-valuemin={1} aria-valuemax={3} aria-valuenow={step + 1} aria-label="Setup progress">
+    <div className="max-w-xl">
+      <div className="mb-8 flex gap-2" role="progressbar" aria-valuemin={1} aria-valuemax={3} aria-valuenow={step + 1} aria-label="Setup progress">
         {STEPS.map((s, i) => (
-          <span key={s.key} className={`h-1 flex-1 rounded-full transition-colors ${i <= step ? "bg-pine" : "bg-line"}`} />
+          <span key={s.key} className={`h-3 flex-1 rounded-full border-2 border-edge transition-colors ${i <= step ? "bg-pine" : "bg-surface"}`} />
         ))}
       </div>
 
-      <p className="text-sm text-muted">
-        Question {step + 1} of {STEPS.length}
+      <p className="inline-block rounded-full bg-sun px-3 py-1 text-xs font-bold tracking-[0.12em] text-[#221a4d] uppercase">
+        Step {step + 1} of {STEPS.length}
       </p>
-      <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">{current.question}</h1>
+      <h1 className="mt-3 font-display text-[2.1rem] leading-[1.05] font-extrabold tracking-tight sm:text-[2.75rem]">{current.question}</h1>
 
       <form
         className="mt-8"
@@ -67,15 +67,15 @@ export function Onboarding({ onDone }: { onDone: (prefs: Preferences) => void })
         }}
       >
         {current.key === "level" ? (
-          <fieldset className="grid gap-2 sm:grid-cols-2">
+          <fieldset className="grid gap-4 sm:grid-cols-2">
             <legend className="sr-only">Vocabulary level</legend>
             {VOCAB_LEVELS.map((level) => {
               const selected = prefs.level === level;
               return (
                 <label
                   key={level}
-                  className={`cursor-pointer rounded-xl border bg-surface p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-pine ${
-                    selected ? "border-pine ring-1 ring-pine" : "border-line hover:border-muted"
+                  className={`btn-pop flex cursor-pointer items-start justify-between gap-3 rounded-2xl p-4 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-pine ${
+                    selected ? "bg-sun-soft" : "bg-surface"
                   }`}
                 >
                   <input
@@ -86,8 +86,16 @@ export function Onboarding({ onDone }: { onDone: (prefs: Preferences) => void })
                     onChange={() => setPrefs({ ...prefs, level })}
                     className="sr-only"
                   />
-                  <span className="block font-medium">{level}</span>
-                  <span className="mt-0.5 block text-sm text-muted">{LEVEL_DESCRIPTIONS[level]}</span>
+                  <span>
+                    <span className="block font-display text-lg font-extrabold">{level}</span>
+                    <span className="mt-0.5 block text-sm text-muted">{LEVEL_DESCRIPTIONS[level]}</span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`grid size-7 shrink-0 place-items-center rounded-full border-2 border-edge text-sm font-bold ${selected ? "bg-indigo text-sun" : "bg-surface"}`}
+                  >
+                    {selected ? "✓" : ""}
+                  </span>
                 </label>
               );
             })}
@@ -105,15 +113,15 @@ export function Onboarding({ onDone }: { onDone: (prefs: Preferences) => void })
               onChange={(e) => setPrefs({ ...prefs, [current.key]: e.target.value })}
               placeholder={current.key === "field" ? "e.g. corporate law, nursing, data science" : "e.g. hiring managers at law firms"}
               maxLength={120}
-              className="h-12 w-full rounded-xl border border-line bg-surface px-4 text-lg focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20"
+              className="h-12 w-full rounded-xl border-2 border-edge bg-surface px-4 text-lg text-ink placeholder:text-muted/70 focus:outline-none focus:ring-4 focus:ring-sun/50"
             />
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2.5">
               {(current.key === "field" ? FIELD_SUGGESTIONS : AUDIENCE_SUGGESTIONS).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setPrefs({ ...prefs, [current.key]: s })}
-                  className="rounded-full border border-line bg-surface px-3 py-1 text-sm text-muted hover:border-muted hover:text-ink"
+                  className="btn-pop rounded-full bg-surface px-3.5 py-1.5 text-sm font-semibold text-ink"
                 >
                   {s}
                 </button>

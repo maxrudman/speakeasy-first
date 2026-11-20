@@ -40,13 +40,13 @@ export function QuestionBank({
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
-      className="m-0 ml-auto h-dvh max-h-dvh w-full max-w-md border-l border-line bg-surface p-0 text-ink backdrop:bg-ink/30 sm:w-[28rem]"
+      className="m-0 ml-auto h-dvh max-h-dvh w-full max-w-md border-l-2 border-edge bg-surface p-0 text-ink backdrop:bg-indigo/50 backdrop:backdrop-blur-sm sm:w-[28rem]"
     >
       <div className="flex h-full flex-col">
-        <div className="border-b border-line p-5">
+        <div className="border-b-2 border-edge bg-sun-soft p-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-semibold">Common questions</h2>
-            <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-muted hover:bg-line/40 hover:text-ink" aria-label="Close">
+            <h2 className="font-display text-xl font-extrabold">Common questions</h2>
+            <button type="button" onClick={onClose} className="btn-pop rounded-xl bg-surface p-1.5 text-ink" aria-label="Close">
               <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                 <path d="M6 6l12 12M18 6L6 18" />
               </svg>
@@ -60,7 +60,7 @@ export function QuestionBank({
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter, e.g. conflict or leadership"
-              className="h-10 w-full rounded-lg border border-line bg-paper/50 px-3 text-[15px] focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20"
+              className="h-10 w-full rounded-xl border-2 border-edge bg-surface px-3 text-sm text-ink placeholder:text-muted/70 focus:outline-none focus:ring-4 focus:ring-sun/50 text-[15px]"
             />
           </label>
         </div>
@@ -69,7 +69,7 @@ export function QuestionBank({
           {groups.length === 0 && <p className="p-5 text-[15px] text-muted">No questions match that filter.</p>}
           {groups.map((group) => (
             <section key={group.category} className="pt-5">
-              <h3 className="sticky top-0 bg-surface px-2 pb-2 text-sm font-semibold text-pine">{group.category}</h3>
+              <h3 className="sticky top-0 bg-surface px-2 pb-2 font-display text-base font-extrabold">{group.category}</h3>
               <ul>
                 {group.questions.map((q) => (
                   <li key={q}>
@@ -79,7 +79,7 @@ export function QuestionBank({
                         onPick(q);
                         setFilter("");
                       }}
-                      className="w-full rounded-lg px-2 py-2.5 text-left text-[15px] leading-snug hover:bg-pine-soft"
+                      className="w-full rounded-xl px-2 py-2.5 text-left text-[15px] leading-snug hover:bg-sun-soft"
                     >
                       {q}
                     </button>

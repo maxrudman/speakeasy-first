@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, ConfirmDialog, ErrorNote, PageHeader, Spinner } from "@/components/ui";
+import { Button, ConfirmDialog, ErrorNote, PageHeader, Spinner, StepTitle } from "@/components/ui";
 import { api } from "@/lib/client-api";
 import { AudiencePanel, DIFFICULTY_INFO, EMPTY_AUDIENCE, type Audience } from "./audience-panel";
 import { Recorder } from "./recorder";
@@ -115,47 +115,69 @@ export function PracticeView() {
 
   return (
     <>
-      <PageHeader title="Practice" description="Answer questions out loud, play your answer back, and keep the good ones." />
+      <PageHeader
+        eyebrow="Interview practice"
+        title="Practice"
+        description="Answer questions out loud, play your answer back, and get graded feedback."
+      />
 
-      <AudiencePanel audience={audience} loading={loading} hasQuestions={questions.length > 0} onGenerate={generate} />
-
-      {error && (
+      <section aria-labelledby="step-audience">
+        <StepTitle n={1} id="step-audience">
+          Set your audience
+        </StepTitle>
         <div className="mt-4">
-          <ErrorNote message={error} onRetry={audience ? () => generate(audience) : undefined} />
+          <AudiencePanel audience={audience} loading={loading} hasQuestions={questions.length > 0} onGenerate={generate} />
         </div>
-      )}
-
-      <section aria-live="polite" className="mt-8">
-        {loading ? (
-          <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-8 text-muted">
-            <Spinner /> Writing questions for your audience…
+        {error && (
+          <div className="mt-4">
+            <ErrorNote message={error} onRetry={audience ? () => generate(audience) : undefined} />
           </div>
-        ) : question ? (
-          <div className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
-            <p className="text-sm text-muted">
-              Question {index + 1} of {questions.length}
-              {audience && <> · {DIFFICULTY_INFO[audience.difficulty].label}</>}
-            </p>
-            <p className="mt-3 font-display text-2xl font-medium leading-snug tracking-tight sm:text-[1.75rem]">{question}</p>
-            <div className="mt-6 flex items-center justify-between gap-3">
-              {source === "builtin" ? (
-                <span className="text-xs text-muted">From the built-in question list</span>
-              ) : (
-                <span />
-              )}
-              <Button variant="secondary" onClick={requestNext} disabled={atEnd && loadingMore}>
-                Next question
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <p className="rounded-2xl border border-dashed border-line p-8 text-center text-[15px] text-muted">
-            Describe your audience above to get questions. You can also record a free answer below.
-          </p>
         )}
       </section>
 
-      <Recorder recorder={recorder} question={question} audience={audience} onRecord={requestRecord} />
+      <section aria-labelledby="step-question" aria-live="polite" className="mt-8">
+        <StepTitle n={2} id="step-question">
+          Read the question
+        </StepTitle>
+        <div className="mt-4">
+          {loading ? (
+            <div className="card-pop flex items-center gap-3 rounded-2xl bg-surface p-8 text-muted">
+              <Spinner /> Writing questions for your audience…
+            </div>
+          ) : question ? (
+            <div className="card-pop rounded-2xl bg-surface p-6 sm:p-8">
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border-2 border-edge bg-sun-soft px-3 py-1 text-sm font-bold">
+                  Question {index + 1} of {questions.length}
+                </span>
+                {audience && (
+                  <span className="rounded-full border-2 border-edge bg-lilac-soft px-3 py-1 text-sm font-bold">
+                    {DIFFICULTY_INFO[audience.difficulty].label}
+                  </span>
+                )}
+              </div>
+              <p className="mt-4 font-display text-2xl leading-snug font-bold tracking-tight sm:text-[1.75rem]">&ldquo;{question}&rdquo;</p>
+              <div className="mt-6 flex items-center justify-between gap-3">
+                {source === "builtin" ? <span className="text-xs text-muted">From the built-in question list</span> : <span />}
+                <Button variant="secondary" onClick={requestNext} disabled={atEnd && loadingMore}>
+                  Next question
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="card-pop rounded-2xl bg-sun-soft p-6 text-[15px] sm:p-8">
+              Set your audience above to get questions, or skip ahead and record a free answer.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section aria-labelledby="step-record" className="mt-8">
+        <StepTitle n={3} id="step-record">
+          Record your answer
+        </StepTitle>
+        <Recorder recorder={recorder} question={question} audience={audience} onRecord={requestRecord} />
+      </section>
 
       <ConfirmDialog
         open={confirm !== null}

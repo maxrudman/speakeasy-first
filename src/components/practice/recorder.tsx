@@ -65,7 +65,7 @@ export function Recorder({
   }
 
   return (
-    <section aria-label="Record your answer" className="mt-6 rounded-2xl border border-line bg-surface p-6 sm:p-8">
+    <div className="card-pop mt-4 rounded-2xl bg-surface p-6 sm:p-8">
       <div className="flex flex-col items-center text-center">
         <button
           type="button"
@@ -127,7 +127,7 @@ export function Recorder({
             readOnly={recording}
             onChange={(e) => setTranscript(e.target.value)}
             placeholder={recording ? "Listening…" : "Your words will appear here."}
-            className="mt-2 min-h-32 w-full rounded-lg border border-line bg-paper/40 px-3 py-2 text-[15px] leading-relaxed focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20"
+            className="mt-2 min-h-32 w-full rounded-xl border-2 border-edge bg-surface px-3 py-2 text-[15px] leading-relaxed text-ink placeholder:text-muted/70 focus:outline-none focus:ring-4 focus:ring-sun/50"
           />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button variant="secondary" size="sm" onClick={copy} disabled={!transcript || recording}>
@@ -164,6 +164,6 @@ export function Recorder({
           />
         </div>
       )}
-    </section>
+    </div>
   );
 }

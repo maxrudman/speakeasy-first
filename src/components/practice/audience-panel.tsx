@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, TextArea, TextField } from "@/components/ui";
+import { Button, ChoiceGroup, TextArea, TextField } from "@/components/ui";
 import { DIFFICULTIES, type Difficulty } from "@/lib/validation";
 
 export type Audience = { purpose: string; role: string; specifications: string; difficulty: Difficulty };
@@ -46,20 +46,24 @@ export function AudiencePanel({
           setOpen(true);
         }}
         aria-expanded={false}
-        className="flex w-full items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-5 py-4 text-left hover:border-muted"
+        className="card-pop flex w-full items-center justify-between gap-4 rounded-2xl bg-surface px-5 py-4 text-left"
       >
         <span className="min-w-0">
-          <span className="block text-[15px] font-medium">Who is your audience?</span>
-          {summary && <span className="mt-0.5 block truncate text-sm text-muted">{summary}</span>}
+          <span className="block font-display text-lg font-extrabold">{summary ? summary : "Who is your audience?"}</span>
+          <span className="mt-0.5 block text-sm text-muted">
+            {summary ? "Questions and grading are tailored to this." : "Describe it to get questions written for that setting."}
+          </span>
         </span>
-        <span className="shrink-0 text-sm text-pine">{summary ? "Edit" : "Describe"}</span>
+        <span className="btn-pop inline-flex h-9 shrink-0 items-center rounded-xl bg-sun px-3.5 text-sm font-semibold text-[#221a4d]">
+          {summary ? "Edit" : "Describe"}
+        </span>
       </button>
     );
   }
 
   return (
     <form
-      className="space-y-4 rounded-2xl border border-pine/40 bg-surface p-5 sm:p-6"
+      className="card-pop space-y-4 rounded-2xl bg-surface p-5 sm:p-6"
       onSubmit={(e) => {
         e.preventDefault();
         if (!canGenerate) return;
@@ -72,7 +76,7 @@ export function AudiencePanel({
         setOpen(false);
       }}
     >
-      <h2 className="font-display text-lg font-semibold">Who is your audience?</h2>
+      <h3 className="font-display text-lg font-extrabold">Who is your audience?</h3>
       <TextField
         label="Purpose"
         placeholder="Law school admissions interview"
@@ -97,29 +101,13 @@ export function AudiencePanel({
         rows={2}
         hint="Optional. Your background, topics to focus on, or anything else."
       />
-      <fieldset>
-        <legend className="text-sm font-medium">Difficulty</legend>
-        <div role="radiogroup" aria-label="Difficulty" className="mt-1.5 grid grid-cols-3 gap-1 rounded-xl border border-line bg-paper p-1">
-          {DIFFICULTIES.map((d) => {
-            const selected = draft.difficulty === d;
-            return (
-              <button
-                key={d}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                onClick={() => setDraft({ ...draft, difficulty: d })}
-                className={`rounded-lg px-3 py-2 text-[15px] font-medium transition ${
-                  selected ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink"
-                }`}
-              >
-                {DIFFICULTY_INFO[d].label}
-              </button>
-            );
-          })}
-        </div>
-        <p className="mt-1.5 text-xs text-muted">{DIFFICULTY_INFO[draft.difficulty].hint}</p>
-      </fieldset>
+      <ChoiceGroup
+        label="Difficulty"
+        value={draft.difficulty}
+        options={DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY_INFO[d].label }))}
+        onChange={(difficulty) => setDraft({ ...draft, difficulty })}
+        hint={DIFFICULTY_INFO[draft.difficulty].hint}
+      />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={() => setOpen(false)}>
           Cancel

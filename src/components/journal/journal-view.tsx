@@ -70,6 +70,7 @@ export function JournalView() {
   return (
     <>
       <PageHeader
+        eyebrow="Your answers"
         title="Journal"
         description="Write down your best answers so they're ready when you need them."
         action={
@@ -84,13 +85,13 @@ export function JournalView() {
       <button
         type="button"
         onClick={() => setBankOpen(true)}
-        className="flex w-full items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-5 py-4 text-left hover:border-muted"
+        className="btn-pop flex w-full items-center justify-between gap-4 rounded-2xl bg-sun-soft px-5 py-4 text-left"
       >
         <span>
-          <span className="block text-[15px] font-medium">Browse common questions</span>
+          <span className="block font-display text-lg font-extrabold">Browse common questions</span>
           <span className="mt-0.5 block text-sm text-muted">Pick one to start a new entry with it.</span>
         </span>
-        <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+        <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-ink" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <path d="M9 6l6 6-6 6" />
         </svg>
       </button>
@@ -115,7 +116,7 @@ export function JournalView() {
       <div className="mt-10">
         {entries.length > 0 && (
           <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 className="font-display text-lg font-semibold">
+            <h2 className="font-display text-xl font-extrabold">
               {entries.length} {entries.length === 1 ? "entry" : "entries"}
             </h2>
             <label className="relative w-full max-w-xs">
@@ -125,7 +126,7 @@ export function JournalView() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search entries"
-                className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-sm focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20"
+                className="h-10 w-full rounded-xl border-2 border-edge bg-surface px-3 text-sm text-ink placeholder:text-muted/70 focus:outline-none focus:ring-4 focus:ring-sun/50"
               />
             </label>
           </div>
@@ -145,8 +146,8 @@ export function JournalView() {
           <ErrorNote message={loadError} onRetry={load} />
         ) : entries.length === 0 ? (
           !composerOpen && (
-            <div className="rounded-2xl border border-dashed border-line px-6 py-14 text-center">
-              <p className="font-display text-xl font-semibold">Your journal is empty</p>
+            <div className="card-pop rounded-2xl bg-sun-soft px-6 py-14 text-center">
+              <p className="font-display text-xl font-extrabold">Your journal is empty</p>
               <p className="mx-auto mt-2 max-w-sm text-[15px] text-muted">
                 Start with a question from the list above, or save an answer from the Practice page.
               </p>
@@ -216,7 +217,7 @@ function EntryCard({
   }
 
   return (
-    <article className="rounded-2xl border border-line bg-surface">
+    <article className="card-pop rounded-2xl bg-surface">
       <button
         type="button"
         onClick={() => setExpanded((x) => !x)}
@@ -224,8 +225,8 @@ function EntryCard({
         className="block w-full px-5 py-4 text-left"
       >
         <div className="flex items-start justify-between gap-4">
-          <h3 className="font-medium leading-snug">{entry.prompt}</h3>
-          <time dateTime={entry.createdAt} className="shrink-0 text-xs text-muted">
+          <h3 className="font-display text-lg leading-snug font-bold">{entry.prompt}</h3>
+          <time dateTime={entry.createdAt} className="shrink-0 rounded-full border-2 border-edge bg-lilac-soft px-2.5 py-0.5 text-xs font-semibold">
             {date}
           </time>
         </div>
@@ -234,7 +235,7 @@ function EntryCard({
         </p>
       </button>
       {expanded && (
-        <div className="flex justify-end gap-1 border-t border-line px-3 py-2">
+        <div className="flex justify-end gap-1 border-t-2 border-dashed border-line px-3 py-2">
           <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
             Edit
           </Button>
@@ -279,7 +280,7 @@ function EntryForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-pine/40 bg-surface p-5 sm:p-6">
+    <form onSubmit={submit} className="card-pop space-y-4 rounded-2xl bg-surface p-5 sm:p-6">
       <div>
         <TextArea
           label="Question"
@@ -291,7 +292,7 @@ function EntryForm({
           autoFocus={!initial.prompt}
         />
         {onBrowse && (
-          <button type="button" onClick={onBrowse} className="mt-1.5 text-sm text-pine underline-offset-2 hover:underline">
+          <button type="button" onClick={onBrowse} className="mt-1.5 text-sm font-semibold text-pine underline underline-offset-2">
             Choose from common questions
           </button>
         )}

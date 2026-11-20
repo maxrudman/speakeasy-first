@@ -19,7 +19,7 @@ export function AccountView({ username, preferences }: { username: string; prefe
 
   return (
     <>
-      <PageHeader title="Account" description={`Signed in as ${username}.`} />
+      <PageHeader eyebrow="Settings" title="Account" description={`Signed in as ${username}.`} />
 
       <div className="space-y-6">
         <Section title="Vocabulary preferences" description="These shape which new terms you get.">
@@ -46,8 +46,8 @@ export function AccountView({ username, preferences }: { username: string; prefe
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line bg-surface p-6">
-      <h2 className="font-display text-lg font-semibold">{title}</h2>
+    <section className="card-pop rounded-2xl bg-surface p-6">
+      <h2 className="font-display text-xl font-extrabold">{title}</h2>
       {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       <div className="mt-5">{children}</div>
     </section>

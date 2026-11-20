@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, ErrorNote, Spinner } from "@/components/ui";
+import { Button, ChipRow, ErrorNote, PageHeader, Spinner, StatChip } from "@/components/ui";
 import { api } from "@/lib/client-api";
 import { applyReview, MASTERY_BOX, pickNextTerm, TARGET_ACTIVE } from "@/lib/vocab-rules";
 import { PreferencesPopover } from "./preferences-popover";
@@ -145,21 +145,30 @@ export function Deck({
 
   return (
     <>
-      <header className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-[2.25rem]">Vocabulary</h1>
-          <p className="mt-1.5 text-[15px] text-muted">
-            {preferences.level} terms for {preferences.field}, aimed at {preferences.audience.toLowerCase()}.
-          </p>
-        </div>
-        <PreferencesPopover
-          preferences={preferences}
-          onSaved={(p) => {
-            onPreferencesChange(p);
-            load();
-          }}
-        />
-      </header>
+      <PageHeader
+        eyebrow="Flashcards"
+        title="Vocabulary"
+        description={`${preferences.level} terms for ${preferences.field}, aimed at ${preferences.audience.toLowerCase()}.`}
+        action={
+          <PreferencesPopover
+            preferences={preferences}
+            onSaved={(p) => {
+              onPreferencesChange(p);
+              load();
+            }}
+          />
+        }
+      />
+
+      {!loading && terms.length > 0 && (
+        <ChipRow>
+          <StatChip icon="📚" tone="peach">
+            {activeCount} learning
+          </StatChip>
+          <StatChip icon="🏅">{masteredCount} mastered</StatChip>
+          <StatChip icon="🔥">{streak > 0 ? `${streak} in a row` : "Start a streak"}</StatChip>
+        </ChipRow>
+      )}
 
       {loading ? (
         <CardSkeleton />
@@ -185,20 +194,13 @@ export function Deck({
         </>
       )}
 
-      {!loading && terms.length > 0 && (
-        <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-          <Stat label="Learning" value={activeCount} />
-          <Stat label="Mastered" value={masteredCount} />
-          <Stat label="Streak" value={streak} />
-          {source === "builtin" && (
-            <p className="w-full text-xs text-muted">
-              Using the built-in word list. Add a free Groq API key (see README) to get terms tailored to your field.
-            </p>
-          )}
-        </dl>
+      {!loading && source === "builtin" && (
+        <p className="mt-6 text-xs text-muted">
+          Using the built-in word list. Add a free Groq API key (see README) to get terms tailored to your field.
+        </p>
       )}
 
-      <p className="mt-6 hidden text-xs text-muted sm:block">
+      <p className="mt-3 hidden text-xs text-muted sm:block">
         Shortcuts: Space shows the definition, ← marks it wrong, → marks it right.
       </p>
     </>
@@ -223,7 +225,7 @@ function Flashcard({
   const isReview = term.status === "retired";
 
   return (
-    <article aria-live="polite" className="overflow-hidden rounded-3xl border border-line bg-surface shadow-[0_1px_0_var(--line),0_12px_32px_-18px_color-mix(in_srgb,var(--ink)_35%,transparent)]">
+    <article aria-live="polite" className="card-pop overflow-hidden rounded-3xl bg-surface">
       <div className="flex items-center justify-between px-6 pt-5 text-xs text-muted sm:px-8">
         <span>{term.partOfSpeech}</span>
         <BoxMeter box={term.box} review={isReview} isNew={isNew} />
@@ -236,15 +238,17 @@ function Flashcard({
         aria-expanded={revealed}
         className="block w-full px-6 pb-8 pt-10 text-left sm:px-8 sm:pt-14"
       >
-        <h2 className="font-display text-[clamp(2.25rem,7vw,3.75rem)] font-semibold leading-[1.05] tracking-tight break-words">
+        <h2 className="font-display text-[clamp(2.25rem,7vw,3.75rem)] font-extrabold leading-[1.05] tracking-tight break-words">
           {term.term}
         </h2>
-        {!revealed && <span className="mt-6 inline-block text-[15px] text-pine">Show definition</span>}
+        {!revealed && (
+          <span className="btn-pop mt-6 inline-flex h-11 items-center rounded-xl bg-sun px-5 text-[15px] font-semibold text-[#221a4d]">Show definition</span>
+        )}
       </button>
 
       <div className={`card-face px-6 sm:px-8 ${revealed ? "opacity-100" : "pointer-events-none h-0 opacity-0"}`}>
         {revealed && (
-          <div className="-mt-4 border-t border-line pb-8 pt-6">
+          <div className="-mt-4 border-t-2 border-dashed border-line pb-8 pt-6">
             <p className="text-lg leading-relaxed">{term.definition}</p>
             {term.example && <p className="mt-3 leading-relaxed text-muted">“{term.example}”</p>}
 
@@ -265,9 +269,9 @@ function Flashcard({
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-4 border-t border-line bg-paper/50 px-6 py-4 sm:px-8">
+      <div className="flex items-center justify-between gap-4 border-t-2 border-edge bg-sun-soft px-6 py-4 sm:px-8">
         <GradeButton kind="wrong" disabled={!revealed} onClick={() => onGrade(false)} />
-        <span className="text-center text-sm text-muted">{revealed ? "Did you know it?" : "Think of the meaning, then reveal"}</span>
+        <span className="text-center text-sm font-medium text-ink">{revealed ? "Did you know it?" : "Think of the meaning, then reveal"}</span>
         <GradeButton kind="right" disabled={!revealed} onClick={() => onGrade(true)} />
       </div>
     </article>
@@ -283,7 +287,7 @@ function GradeButton({ kind, disabled, onClick }: { kind: "right" | "wrong"; dis
       disabled={disabled}
       aria-label={right ? "I got it right" : "I got it wrong"}
       title={right ? "I got it right (→)" : "I got it wrong (←)"}
-      className={`grid size-14 shrink-0 place-items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-35 ${
+      className={`btn-pop grid size-14 shrink-0 place-items-center rounded-full disabled:cursor-not-allowed disabled:opacity-40 ${
         right ? "bg-pine-soft text-pine enabled:hover:bg-pine enabled:hover:text-white" : "bg-coral-soft text-coral enabled:hover:bg-coral enabled:hover:text-white"
       }`}
     >
@@ -302,25 +306,16 @@ function BoxMeter({ box, review, isNew }: { box: number; review: boolean; isNew:
       <span>{label}</span>
       <span className="flex gap-0.5" aria-hidden="true">
         {Array.from({ length: MASTERY_BOX }, (_, i) => (
-          <span key={i} className={`h-1.5 w-3 rounded-full ${i < box ? "bg-pine" : "bg-line"}`} />
+          <span key={i} className={`h-2.5 w-4 rounded-full border-[1.5px] border-edge ${i < box ? "bg-pine" : "bg-surface"}`} />
         ))}
       </span>
     </span>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <dt className="text-muted">{label}</dt>
-      <dd className="font-display text-lg font-semibold tabular-nums">{value}</dd>
-    </div>
-  );
-}
-
 function CardSkeleton() {
   return (
-    <div className="flex min-h-80 flex-col items-center justify-center gap-3 rounded-3xl border border-line bg-surface text-muted">
+    <div className="card-pop flex min-h-80 flex-col items-center justify-center gap-3 rounded-3xl bg-surface text-muted">
       <Spinner />
       <span className="text-sm">Getting your terms ready…</span>
     </div>
@@ -329,8 +324,8 @@ function CardSkeleton() {
 
 function EmptyDeck({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="rounded-3xl border border-dashed border-line px-6 py-16 text-center">
-      <p className="font-display text-xl font-semibold">No terms to review right now</p>
+    <div className="card-pop rounded-3xl bg-sun-soft px-6 py-16 text-center">
+      <p className="font-display text-xl font-extrabold">No terms to review right now</p>
       <p className="mx-auto mt-2 max-w-sm text-[15px] text-muted">
         New terms couldn&apos;t be loaded. Try again, or change your preferences in the corner.
       </p>

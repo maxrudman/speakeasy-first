@@ -44,7 +44,7 @@ export function Button({
 /* --------------------------------- Form fields -------------------------------- */
 
 const inputBase =
-  "w-full rounded-xl border-2 border-line bg-surface px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 focus:border-edge focus:outline-none focus:ring-4 focus:ring-sun/50";
+  "w-full rounded-xl border-2 border-edge bg-surface px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 focus:border-edge focus:outline-none focus:ring-4 focus:ring-sun/50";
 
 export function TextField({
   label,
@@ -241,5 +241,100 @@ export function PageHeader({
       </div>
       {action}
     </header>
+  );
+}
+
+/* ------------------------------ Pitch Room pieces ------------------------------ */
+/* Shared by every tab so headers, steps and stats look the same everywhere. */
+
+/** Numbered step heading with a yellow sticker number ("1 Pick your room"). Use only for real sequences. */
+export function StepTitle({ n, id, children }: { n: number; id?: string; children: ReactNode }) {
+  return (
+    <h2 id={id} className="flex items-center gap-3 font-display text-xl font-extrabold">
+      <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full border-2 border-edge bg-sun text-base text-[#221a4d]">
+        {n}
+      </span>
+      {children}
+    </h2>
+  );
+}
+
+const chipFills = {
+  surface: "bg-surface",
+  lilac: "bg-lilac-soft",
+  sun: "bg-sun-soft",
+  mint: "bg-pine-soft",
+  peach: "bg-coral-soft",
+} as const;
+
+/** Rounded sticker chip for quick stats under a page header. */
+export function StatChip({ icon, children, tone = "surface" }: { icon?: string; children: ReactNode; tone?: keyof typeof chipFills }) {
+  return (
+    <span className={`card-pop inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${chipFills[tone]}`}>
+      {icon && <span aria-hidden="true">{icon}</span>}
+      {children}
+    </span>
+  );
+}
+
+/** Row of StatChips that sits right under the PageHeader. */
+export function ChipRow({ children }: { children: ReactNode }) {
+  return <div className="-mt-3 mb-8 flex flex-wrap gap-3">{children}</div>;
+}
+
+/** Sticker panel. Tinted fills match the pastel cards in Pitch Room. */
+export function Panel({
+  children,
+  tone = "surface",
+  className = "",
+  as: Tag = "section",
+  ...props
+}: React.HTMLAttributes<HTMLElement> & { tone?: keyof typeof chipFills; as?: "section" | "div" | "article" }) {
+  return (
+    <Tag className={`card-pop rounded-2xl ${chipFills[tone]} ${className}`} {...props}>
+      {children}
+    </Tag>
+  );
+}
+
+/** Segmented choice built from sticker buttons; the selected one turns yellow, like Pitch Room's timer. */
+export function ChoiceGroup<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  hint,
+}: {
+  label: string;
+  value: T;
+  options: readonly { value: T; label: string }[];
+  onChange: (v: T) => void;
+  hint?: string;
+}) {
+  const id = useId();
+  return (
+    <div>
+      <p id={id} className="text-sm font-medium text-ink">
+        {label}
+      </p>
+      <div role="radiogroup" aria-labelledby={id} className="mt-1.5 grid gap-3" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+        {options.map((o) => {
+          const on = o.value === value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => onChange(o.value)}
+              className={`btn-pop h-11 rounded-xl text-[15px] font-semibold ${on ? "bg-sun text-[#221a4d]" : "bg-surface text-ink"}`}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      {hint && <p className="mt-2 text-xs text-muted">{hint}</p>}
+    </div>
   );
 }
