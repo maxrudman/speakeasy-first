@@ -25,6 +25,9 @@ export const users = pgTable("users", {
   vocabLevel: text("vocab_level"),
   vocabField: text("vocab_field"),
   vocabAudience: text("vocab_audience"),
+  // Flashcard grading streak, kept on the server so Personal Secretary can read the best one.
+  currentStreak: integer("current_streak").notNull().default(0),
+  bestStreak: integer("best_streak").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

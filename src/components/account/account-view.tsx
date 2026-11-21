@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PreferencesForm, type Preferences } from "@/components/vocabulary/preferences-form";
@@ -22,6 +23,18 @@ export function AccountView({ username, preferences }: { username: string; prefe
       <PageHeader eyebrow="Settings" title="Account" description={`Signed in as ${username}.`} />
 
       <div className="space-y-6">
+        <Link
+          href="/secretary"
+          className="btn-pop flex items-center justify-between gap-4 rounded-2xl bg-sun-soft px-5 py-4 md:hidden"
+        >
+          <span>
+            <span className="block font-display text-lg font-extrabold">Personal Secretary</span>
+            <span className="mt-0.5 block text-sm text-muted">Send your SpeakEasy XP to your secretary app.</span>
+          </span>
+          <span aria-hidden="true" className="text-xl">
+            ›
+          </span>
+        </Link>
         <Section title="Vocabulary preferences" description="These shape which new terms you get.">
           {preferences ? (
             <PreferencesForm initial={preferences} submitLabel="Save preferences" onSaved={() => router.refresh()} />
