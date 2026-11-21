@@ -5,17 +5,11 @@ import { db, schema } from "@/db";
 
 /**
  * Personal Secretary link.
- * SpeakEasy activity earns XP in the Personal Secretary app. The secretary app runs in a
- * sandbox that can't call this server, so the link is a sync code: a short, read-only
- * summary of this account's lifetime counts. Personal Secretary remembers the last code it
- * saw and awards XP only for the difference, so pasting the same code twice earns nothing.
+ * SpeakEasy activity earns XP in the owner's Personal Secretary app. There is no page for it
+ * in SpeakEasy: a scheduled task reads /api/secretary/feed (one account only, set by
+ * SECRETARY_USERNAME) and hands the counts to Personal Secretary, which awards XP only for
+ * levels gained since the last sync.
  */
-export const XP_RULES = {
-  cardGraded: 1, // each flashcard graded right or wrong
-  termMastered: 5, // each term that reaches the last Leitner box and retires
-  journalEntry: 10, // each saved practice answer or journal response
-} as const;
-
 export type SecretaryStats = {
   cardsGraded: number;
   termsMastered: number;
@@ -43,14 +37,7 @@ export async function getSecretaryStats(userId: string): Promise<SecretaryStats>
   };
 }
 
-export function xpFor(stats: SecretaryStats) {
-  const cards = stats.cardsGraded * XP_RULES.cardGraded;
-  const mastered = stats.termsMastered * XP_RULES.termMastered;
-  const journal = stats.journalEntries * XP_RULES.journalEntry;
-  return { cards, mastered, journal, total: cards + mastered + journal };
-}
-
-/** The summary both the sync code and the daily feed carry. The account id is hashed so it never leaves the server. */
+/** What the feed returns. The account id is hashed so it never leaves the server. */
 export function syncPayload(user: { id: string; username: string }, stats: SecretaryStats) {
   return {
     v: 1,
@@ -62,9 +49,4 @@ export function syncPayload(user: { id: string; username: string }, stats: Secre
     journal: stats.journalEntries,
     best: stats.bestStreak,
   };
-}
-
-/** "SE1." + base64url(JSON), for pasting into Personal Secretary by hand. */
-export function makeSyncCode(user: { id: string; username: string }, stats: SecretaryStats) {
-  return "SE1." + Buffer.from(JSON.stringify(syncPayload(user, stats))).toString("base64url");
 }

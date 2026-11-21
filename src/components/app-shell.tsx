@@ -19,7 +19,6 @@ const NAV_ITEMS = [
   { href: "/practice", label: "Practice", blurb: "Answer out loud", tile: "#c8f0e8", icon: MicIcon },
   { href: "/pitch", label: "Pitch Room", blurb: "Elevator pitch game", tile: "#ff7a59", icon: StageIcon, badge: "Game" },
   { href: "/journal", label: "Journal", blurb: "Your best answers", tile: "#ffe9a8", icon: PenIcon },
-  { href: "/secretary", label: "Secretary", blurb: "Send XP to Personal Secretary", tile: "#ffd27a", icon: StarIcon },
   { href: "/account", label: "Account", blurb: "Progress and settings", tile: "#ddd2ff", icon: UserIcon },
 ] as const;
 
@@ -240,13 +239,6 @@ function StageIcon({ className }: IconProps) {
       <path d="M6 13h12l-1.5 8h-9z" />
       <path d="M9.5 13V9.5a2.5 2.5 0 0 1 5 0V13" />
       <path d="M19 3.5v3M17.5 5h3M4.5 4l1.5 1.5" />
-    </svg>
-  );
-}
-function StarIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...stroke}>
-      <path d="M12 2l2.9 6.1 6.6.8-4.9 4.6 1.3 6.5L12 16.9 6.1 20l1.3-6.5L2.5 8.9l6.6-.8Z" />
     </svg>
   );
 }
