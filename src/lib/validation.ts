@@ -83,3 +83,6 @@ export const pitchRewriteSchema = z.object({
   seconds: z.number().int().min(15).max(120).default(60),
 });
 export type PitchRewriteInput = z.infer<typeof pitchRewriteSchema>;
+
+/** Game XP the browser reports for Personal Secretary. */
+export const gameXpSchema = z.object({ xp: z.number().int().min(0).max(10_000_000) });

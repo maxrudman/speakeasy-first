@@ -84,6 +84,22 @@ export function GameProvider({ username, children }: { username: string; childre
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
   }, []);
 
+  // Copy XP to the account (debounced) so Personal Secretary sees the same level shown here.
+  // A plain fetch, not the api() helper, so it never counts as game activity itself.
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => {
+      fetch("/api/game/xp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ xp: Math.floor(state.xp) }),
+      }).catch(() => {
+        /* offline: the next change or visit sends it */
+      });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [ready, state.xp]);
+
   const value = useMemo(() => ({ state, ready, award }), [state, ready, award]);
 
   return (

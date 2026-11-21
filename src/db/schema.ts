@@ -28,6 +28,9 @@ export const users = pgTable("users", {
   // Flashcard grading streak, kept on the server so Personal Secretary can read the best one.
   currentStreak: integer("current_streak").notNull().default(0),
   bestStreak: integer("best_streak").notNull().default(0),
+  // Lifetime game XP (the Rookie → Legend levels), copied up from the browser so Personal Secretary
+  // can see the same level the app shows. Only ever goes up.
+  gameXp: integer("game_xp").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
