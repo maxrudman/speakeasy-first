@@ -42,6 +42,19 @@ export const POST = withUser<Ctx>(async (req, user, { params }) => {
     .where(eq(schema.vocabTerms.id, term.id))
     .returning(termColumns);
 
+  // Right answers extend the streak (and the best one); a wrong answer resets it.
+  await db
+    .update(schema.users)
+    .set(
+      data.correct
+        ? {
+            currentStreak: sql`${schema.users.currentStreak} + 1`,
+            bestStreak: sql`greatest(${schema.users.bestStreak}, ${schema.users.currentStreak} + 1)`,
+          }
+        : { currentStreak: 0 },
+    )
+    .where(eq(schema.users.id, user.id));
+
   return NextResponse.json({ term: updated });
 });
 
