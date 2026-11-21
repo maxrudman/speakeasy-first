@@ -15,6 +15,13 @@
       "when": 1795222175260,
       "tag": "0001_secretary_streaks",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795224264466,
+      "tag": "0002_secretary_game_xp",
+      "breakpoints": true
     }
   ]
 }
